@@ -9,11 +9,11 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://ft-manager.onrender.com',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:5000',
+        target: 'https://ft-manager.onrender.com',
         ws: true,
       },
     },

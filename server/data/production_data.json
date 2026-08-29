@@ -1,51 +1,59 @@
 {
   "productName": "PROTEUS",
-  "shift": "Evening Shift (14:00 - 22:00)",
-  "lastUpdated": "2026-08-29T08:30:14.296Z",
+  "shift": "Off-Shift (22:00 - 06:00)",
+  "lastUpdated": "2026-08-29T17:28:27.021Z",
   "stages": {
     "assembly": {
       "id": "assembly",
       "name": "Assembly",
       "subtext": "Mechanical & Sub-Assembly",
-      "target": 740,
+      "target": 760,
       "current": 669,
       "hourlyRate": 15.5,
       "startSerial": "PST20001",
       "currentSerial": "PST20669",
-      "targetSerial": "PST20740",
+      "targetSerial": "PST20760",
       "currentCount": 669,
-      "targetCount": 740
+      "targetCount": 760
     },
     "ft": {
       "id": "ft",
       "name": "FT",
       "fullName": "Functional Testing",
       "subtext": "Automated QA & Electrical Diagnostics",
-      "target": 720,
+      "target": 740,
       "current": 656,
       "hourlyRate": 12.2,
       "startSerial": "PST20001",
       "currentSerial": "PST20656",
-      "targetSerial": "PST20720",
+      "targetSerial": "PST20740",
       "currentCount": 656,
-      "targetCount": 720
+      "targetCount": 740
     },
     "dlc": {
       "id": "dlc",
       "name": "DLC",
       "fullName": "Device Life Cycle",
       "subtext": "Final Calibration & Burn-In",
-      "target": 720,
+      "target": 740,
       "current": 654,
       "hourlyRate": 10.1,
       "startSerial": "PST20001",
       "currentSerial": "PST20654",
-      "targetSerial": "PST20720",
+      "targetSerial": "PST20740",
       "currentCount": 654,
-      "targetCount": 720
+      "targetCount": 740
     }
   },
   "logs": [
+    {
+      "id": "shift-1788024507020",
+      "timestamp": "2026-08-29T17:28:27.020Z",
+      "stage": "system",
+      "stageName": "Shift Scheduler",
+      "message": "Shift changed to Off-Shift (22:00 - 06:00): Target Proteus increased by +20 units on all stages",
+      "operator": "Auto Shift Engine"
+    },
     {
       "id": "shift-1787992214296",
       "timestamp": "2026-08-29T08:30:14.296Z",
@@ -604,18 +612,6 @@
       "currentSerial": "PST20225",
       "targetSerial": "PST20200",
       "currentCount": 225,
-      "targetCount": 200,
-      "delta": 5,
-      "operator": "admin (+5)"
-    },
-    {
-      "id": "log-1787900580280-32",
-      "timestamp": "2026-08-28T07:03:00.280Z",
-      "stage": "assembly",
-      "stageName": "Assembly",
-      "currentSerial": "PST20220",
-      "targetSerial": "PST20200",
-      "currentCount": 220,
       "targetCount": 200,
       "delta": 5,
       "operator": "admin (+5)"
