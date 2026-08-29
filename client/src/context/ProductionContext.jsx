@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
+import { SOCKET_URL, getApiUrl } from '../config/api';
 
 const ProductionContext = createContext(null);
 
@@ -22,7 +23,7 @@ export const ProductionProvider = ({ children }) => {
 
   // Initialize Socket connection
   useEffect(() => {
-    const socketInstance = io(window.location.origin, {
+    const socketInstance = io(SOCKET_URL, {
       reconnectionAttempts: 20,
       reconnectionDelay: 1000,
       transports: ['websocket', 'polling']
@@ -60,7 +61,7 @@ export const ProductionProvider = ({ children }) => {
     setSocket(socketInstance);
 
     // Initial fetch fallback
-    fetch('/api/production')
+    fetch(getApiUrl('/api/production'))
       .then(res => res.json())
       .then(res => {
         if (res.success && res.data) {
@@ -79,7 +80,7 @@ export const ProductionProvider = ({ children }) => {
     if (socket && connected) {
       socket.emit('increment_count', { stage, delta, operator });
     } else {
-      fetch('/api/production/update', {
+      fetch(getApiUrl('/api/production/update'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stage, delta, operator })
@@ -96,7 +97,7 @@ export const ProductionProvider = ({ children }) => {
     if (socket && connected) {
       socket.emit('set_stage_serial', { stage, currentSerial, targetSerial, startSerial, operator });
     } else {
-      fetch('/api/production/update', {
+      fetch(getApiUrl('/api/production/update'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stage, currentSerial, targetSerial, startSerial, operator })
@@ -110,7 +111,7 @@ export const ProductionProvider = ({ children }) => {
 
   // Batch update
   const batchUpdate = useCallback((stages, shift, operator = 'Admin Batch') => {
-    fetch('/api/production/batch', {
+    fetch(getApiUrl('/api/production/batch'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ stages, shift, operator })
@@ -123,7 +124,7 @@ export const ProductionProvider = ({ children }) => {
 
   // Reset shift or day
   const resetProduction = useCallback((params) => {
-    fetch('/api/production/reset', {
+    fetch(getApiUrl('/api/production/reset'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params)
@@ -139,7 +140,7 @@ export const ProductionProvider = ({ children }) => {
     if (socket && connected) {
       socket.emit('set_shift', { shift });
     } else {
-      fetch('/api/production/update', {
+      fetch(getApiUrl('/api/production/update'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shift })

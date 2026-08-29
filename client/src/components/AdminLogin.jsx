@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Lock, User, Eye, EyeOff, ArrowLeft, KeyRound, AlertCircle, Sparkles } from 'lucide-react';
+import { getApiUrl } from '../config/api';
 
 export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
   const [username, setUsername] = useState('admin');
@@ -19,7 +20,7 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(getApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
