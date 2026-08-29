@@ -54,23 +54,23 @@ export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
 
         {/* 1. TARGET PROTEUS BOX (AT TOP) */}
         <div className="tv-count-box tv-target-count-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+          <div className="tv-metric-header">
             <Target size={16} color="#ef4444" />
-            <div className="tv-metric-label" style={{ marginBottom: 0 }}>
+            <div className="tv-metric-label">
               <span className="text-red-highlight">TARGET</span> PROTEUS
             </div>
           </div>
           
           {/* Big Target Serial Number */}
-          <div className="tv-huge-number tv-serial-text tv-target-serial">
+          <div className="tv-huge-number tv-serial-text tv-target-serial" title={targetSerial}>
             {targetSerial}
           </div>
 
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.06)', padding: '0.2rem 0.8rem', borderRadius: '999px', fontSize: '0.85rem', color: '#cbd5e1', marginTop: '0.4rem' }}>
+          <div className="tv-metric-subpill">
             <span>Shift Target:</span>
-            <strong style={{ fontFamily: 'var(--font-mono)', color: '#ffffff' }}>{targetCount} Units</strong>
-            <span>•</span>
-            <span>Remaining: <strong style={{ fontFamily: 'var(--font-mono)', color: remaining > 0 ? '#fb923c' : '#34d399' }}>{remaining}</strong></span>
+            <strong>{targetCount} Units</strong>
+            <span className="tv-subpill-divider">•</span>
+            <span>Remaining: <strong className={remaining > 0 ? 'text-remaining-warn' : 'text-remaining-good'}>{remaining}</strong></span>
           </div>
         </div>
 
@@ -97,21 +97,21 @@ export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
 
         {/* 3. CURRENT PROTEUS BOX (BELOW TARGET) */}
         <div className={`tv-count-box tv-current-count-box ${isCompleted ? 'target-reached' : ''}`}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+          <div className="tv-metric-header">
             <QrCode size={16} color="#ef4444" />
-            <div className="tv-metric-label" style={{ marginBottom: 0 }}>
+            <div className="tv-metric-label">
               <span className="text-red-highlight">CURRENT</span> PROTEUS
             </div>
           </div>
           
           {/* Huge Glowing Serial Number */}
-          <div className="tv-huge-number tv-serial-text">
+          <div className="tv-huge-number tv-serial-text" title={currentSerial}>
             {currentSerial}
           </div>
 
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.06)', padding: '0.2rem 0.8rem', borderRadius: '999px', fontSize: '0.85rem', color: '#cbd5e1', marginTop: '0.4rem' }}>
+          <div className="tv-metric-subpill">
             <span>Completed Today:</span>
-            <strong style={{ fontFamily: 'var(--font-mono)', color: '#ffffff' }}>{currentCount} Units</strong>
+            <strong>{currentCount} Units</strong>
           </div>
         </div>
 

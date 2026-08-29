@@ -1,7 +1,7 @@
 {
   "productName": "PROTEUS",
   "shift": "Off-Shift (22:00 - 06:00)",
-  "lastUpdated": "2026-08-29T17:28:27.021Z",
+  "lastUpdated": "2026-08-29T18:17:41.752Z",
   "stages": {
     "assembly": {
       "id": "assembly",
@@ -46,6 +46,22 @@
     }
   },
   "logs": [
+    {
+      "id": "auth-1788027461752",
+      "timestamp": "2026-08-29T18:17:41.752Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_user' authenticated successfully",
+      "operator": "admin_user"
+    },
+    {
+      "id": "auth-1788027267895",
+      "timestamp": "2026-08-29T18:14:27.895Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_user' authenticated successfully",
+      "operator": "admin_user"
+    },
     {
       "id": "shift-1788024507020",
       "timestamp": "2026-08-29T17:28:27.020Z",
@@ -588,30 +604,6 @@
       "currentSerial": "PST20235",
       "targetSerial": "PST20200",
       "currentCount": 235,
-      "targetCount": 200,
-      "delta": 5,
-      "operator": "admin (+5)"
-    },
-    {
-      "id": "log-1787900581045-287",
-      "timestamp": "2026-08-28T07:03:01.045Z",
-      "stage": "assembly",
-      "stageName": "Assembly",
-      "currentSerial": "PST20230",
-      "targetSerial": "PST20200",
-      "currentCount": 230,
-      "targetCount": 200,
-      "delta": 5,
-      "operator": "admin (+5)"
-    },
-    {
-      "id": "log-1787900580483-699",
-      "timestamp": "2026-08-28T07:03:00.483Z",
-      "stage": "assembly",
-      "stageName": "Assembly",
-      "currentSerial": "PST20225",
-      "targetSerial": "PST20200",
-      "currentCount": 225,
       "targetCount": 200,
       "delta": 5,
       "operator": "admin (+5)"

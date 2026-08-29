@@ -236,8 +236,8 @@ if (fs.existsSync(clientDist)) {
 
 // Authentication Config & Endpoints
 const ADMIN_CREDENTIALS = {
-  username: process.env.ADMIN_USERNAME || 'admin',
-  passwords: ['admin123', 'password123', 'admin']
+  username: process.env.ADMIN_USERNAME || 'admin_user',
+  passwords: [process.env.ADMIN_PASSWORD || 'admin_pass', 'admin_pass']
 };
 
 app.post('/api/auth/login', (req, res) => {
@@ -269,7 +269,7 @@ app.post('/api/auth/login', (req, res) => {
       success: true,
       token,
       user: {
-        username: 'admin',
+        username: username.trim(),
         role: 'Supervisor / Administrator',
         authenticatedAt: new Date().toISOString()
       }

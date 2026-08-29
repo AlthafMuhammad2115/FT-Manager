@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, User, Eye, EyeOff, ArrowLeft, KeyRound, AlertCircle, Sparkles } from 'lucide-react';
+import { ShieldCheck, Lock, User, Eye, EyeOff, ArrowLeft, AlertCircle } from 'lucide-react';
 import { getApiUrl } from '../config/api';
 
 export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -41,10 +41,10 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
     } catch (err) {
       // Fallback local verification if server is unreachable
       if (
-        (username.toLowerCase() === 'admin') &&
-        (password === 'admin123' || password === 'password123' || password === 'admin')
+        (username.trim().toLowerCase() === 'admin_user') &&
+        (password.trim() === 'admin_pass')
       ) {
-        const dummyUser = { username: 'admin', role: 'Supervisor / Administrator' };
+        const dummyUser = { username: 'admin_user', role: 'Supervisor / Administrator' };
         localStorage.setItem('proteus_admin_token', 'local-token-' + Date.now());
         localStorage.setItem('proteus_admin_user', JSON.stringify(dummyUser));
         onLoginSuccess(dummyUser);
@@ -54,12 +54,6 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFillDemoCredentials = () => {
-    setUsername('admin');
-    setPassword('admin123');
-    setErrorMessage('');
   };
 
   return (
@@ -85,7 +79,7 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
         )}
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleSubmit} className="login-form" autoComplete="off">
           <div className="login-field-group">
             <label htmlFor="login-username">
               <User size={15} />
@@ -97,9 +91,9 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter admin username..."
+                placeholder="Enter username..."
                 autoFocus
-                autoComplete="username"
+                autoComplete="off"
                 required
               />
             </div>
@@ -117,7 +111,7 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password..."
-                autoComplete="current-password"
+                autoComplete="new-password"
                 required
               />
               <button
@@ -129,19 +123,6 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
-            </div>
-          </div>
-
-          {/* Quick Demo Credentials helper */}
-          <div className="login-credentials-hint" onClick={handleFillDemoCredentials}>
-            <div className="hint-header">
-              <KeyRound size={14} color="#ea580c" />
-              <span>Default Credentials:</span>
-            </div>
-            <div className="hint-keys">
-              <span>User: <code>admin</code></span>
-              <span>Pass: <code>admin123</code></span>
-              <span className="hint-click-action">(Click to Auto-fill)</span>
             </div>
           </div>
 
