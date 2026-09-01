@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Header } from './Header';
 import { StageCard } from './StageCard';
 import { useProduction } from '../context/ProductionContext';
@@ -7,6 +7,7 @@ import { BarChart3, CheckSquare, Zap, QrCode } from 'lucide-react';
 export const Dashboard = ({ onOpenAdmin }) => {
   const { data, lastPulseStage, incrementCount } = useProduction();
   const stages = data.stages || {};
+  const [viewMode, setViewMode] = useState('auto'); // 'auto' | 'inverse'
 
   const assembly = stages.assembly || { startSerial: 'PST20001', currentSerial: 'PST20001', targetSerial: 'PST20200', targetCount: 200, currentCount: 0 };
   const ft = stages.ft || { startSerial: 'PST20001', currentSerial: 'PST20001', targetSerial: 'PST20200', targetCount: 200, currentCount: 0 };
@@ -37,12 +38,22 @@ export const Dashboard = ({ onOpenAdmin }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [incrementCount, onOpenAdmin]);
 
+  // Sync viewMode to body class so CSS can override html/body overflow on large screens
+  useEffect(() => {
+    if (viewMode === 'inverse') {
+      document.body.classList.add('view-inverse-active');
+    } else {
+      document.body.classList.remove('view-inverse-active');
+    }
+    return () => document.body.classList.remove('view-inverse-active');
+  }, [viewMode]);
+
   return (
-    <div className="tv-container">
+    <div className={`tv-container${viewMode === 'inverse' ? ' view-inverse' : ''}`}>
       <div className="tv-background" />
 
       {/* Top Header */}
-      <Header onOpenAdmin={onOpenAdmin} />
+      <Header onOpenAdmin={onOpenAdmin} viewMode={viewMode} onToggleViewMode={() => setViewMode(v => v === 'auto' ? 'inverse' : 'auto')} />
 
       {/* 3 Columns / Cards: Assembly, FT, DLC */}
       <main className="tv-stages-grid">

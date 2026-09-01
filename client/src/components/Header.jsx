@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Activity, Clock, Cpu, Maximize, Minimize, Settings, Radio } from 'lucide-react';
+import { Activity, Clock, Cpu, Maximize, Minimize, Settings, Radio, Monitor, Smartphone } from 'lucide-react';
 import { useProduction } from '../context/ProductionContext';
 
 // Auto shift detection based on current time (matches server logic)
@@ -14,7 +14,7 @@ function getAutoShift() {
   }
 }
 
-export const Header = ({ onOpenAdmin }) => {
+export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode }) => {
   const { data, connected } = useProduction();
   const [time, setTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -89,6 +89,21 @@ export const Header = ({ onOpenAdmin }) => {
         >
           <Settings size={16} />
           <span>Admin Panel</span>
+        </button>
+
+        <button 
+          className={`tv-btn tv-view-toggle${viewMode === 'inverse' ? ' active' : ''}`}
+          onClick={onToggleViewMode}
+          title={viewMode === 'auto' ? 'Switch to Inverse View (Mobile on Desktop / Desktop on Mobile)' : 'Switch back to Auto Responsive View'}
+          id="btn-view-mode-toggle"
+        >
+          {viewMode === 'inverse' ? <Smartphone size={15} /> : <Monitor size={15} />}
+          <span className="tv-view-toggle-label">
+            {viewMode === 'inverse' ? 'Inverse' : 'Auto'}
+          </span>
+          <span className="tv-view-toggle-track">
+            <span className="tv-view-toggle-thumb" />
+          </span>
         </button>
 
         <button 

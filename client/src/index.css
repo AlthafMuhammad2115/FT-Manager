@@ -1589,6 +1589,16 @@ html, body, #root {
   }
 }
 
+/* Override: when inverse view is active on large screen, allow scrolling */
+@media (min-width: 1024px) and (min-height: 720px) {
+  body.view-inverse-active,
+  body.view-inverse-active html,
+  body.view-inverse-active #root {
+    height: auto !important;
+    overflow: auto !important;
+  }
+}
+
 /* Medium Laptops & Compact Desktops (1024px - 1280px) */
 @media (max-width: 1280px) {
   .tv-stages-grid {
@@ -1986,3 +1996,516 @@ html, body, #root {
   }
 }
 
+/* ============================================================
+   VIEW MODE TOGGLE BUTTON
+   ============================================================ */
+
+.tv-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  font-family: var(--font-main);
+}
+
+.tv-view-toggle:hover {
+  border-color: rgba(234, 88, 12, 0.45);
+  color: #f97316;
+  background: rgba(234, 88, 12, 0.08);
+}
+
+.tv-view-toggle.active {
+  border-color: rgba(234, 88, 12, 0.6);
+  background: rgba(234, 88, 12, 0.15);
+  color: #f97316;
+  box-shadow: 0 0 14px rgba(234, 88, 12, 0.25);
+}
+
+/* The sliding pill track inside the button */
+.tv-view-toggle-track {
+  display: inline-block;
+  width: 28px;
+  height: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  position: relative;
+  transition: background 0.22s, border-color 0.22s;
+  flex-shrink: 0;
+}
+
+.tv-view-toggle.active .tv-view-toggle-track {
+  background: rgba(234, 88, 12, 0.5);
+  border-color: #ea580c;
+}
+
+.tv-view-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #64748b;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), background 0.22s;
+}
+
+.tv-view-toggle.active .tv-view-toggle-thumb {
+  transform: translateX(13px);
+  background: #ffffff;
+}
+
+/* ============================================================
+   INVERSE VIEW MODE — .view-inverse on .tv-container
+   Forces mobile layout on desktop, desktop layout on mobile
+   ============================================================ */
+
+/* On desktop (>=1024px) with inverse: force mobile phone styles */
+@media (min-width: 1024px) {
+  .view-inverse {
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: auto !important;
+    overflow: visible !important;
+  }
+
+  .view-inverse .tv-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+  }
+
+  .view-inverse .tv-brand {
+    gap: 0.6rem !important;
+  }
+
+  .view-inverse .tv-brand-logo {
+    width: 2.4rem !important;
+    height: 2.4rem !important;
+    border-radius: 8px !important;
+  }
+
+  .view-inverse .tv-brand-logo svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .view-inverse .tv-title-group h1 {
+    font-size: 1.05rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .view-inverse .tv-title-group .tv-subtitle {
+    font-size: 0.72rem !important;
+  }
+
+  .view-inverse .tv-header-center {
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+    width: 100% !important;
+  }
+
+  .view-inverse .tv-badge {
+    padding: 0.3rem 0.65rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .view-inverse .tv-btn {
+    padding: 0.35rem 0.65rem !important;
+    font-size: 0.75rem !important;
+    min-height: 36px !important;
+  }
+
+  .view-inverse .tv-clock-box {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    text-align: left !important;
+    width: 100% !important;
+    background: rgba(0, 0, 0, 0.35) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    padding: 0.4rem 0.75rem !important;
+    border-radius: 8px !important;
+  }
+
+  .view-inverse .tv-clock-time {
+    font-size: 1.05rem !important;
+  }
+
+  .view-inverse .tv-clock-date {
+    font-size: 0.72rem !important;
+  }
+
+  .view-inverse .tv-stages-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+    margin: 0.25rem 0 !important;
+  }
+
+  .view-inverse .tv-card {
+    padding: 0.85rem !important;
+    border-radius: 12px !important;
+  }
+
+  .view-inverse .tv-huge-number {
+    font-size: 1.85rem !important;
+  }
+
+  .view-inverse .tv-target-serial {
+    font-size: 1.55rem !important;
+  }
+
+  .view-inverse .tv-footer {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.6rem !important;
+    padding-top: 0.5rem !important;
+  }
+
+  .view-inverse .tv-footer-stats {
+    flex-direction: column !important;
+    gap: 0.4rem !important;
+    width: 100% !important;
+  }
+
+  .view-inverse .tv-total-badge {
+    font-size: 0.8rem !important;
+    padding: 0.5rem 0.65rem !important;
+    background: rgba(0, 0, 0, 0.35) !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    width: 100% !important;
+  }
+
+  .view-inverse .tv-total-badge strong {
+    font-size: 1rem !important;
+  }
+
+  .view-inverse .tv-actions {
+    justify-content: center !important;
+    text-align: center !important;
+  }
+}
+
+
+/* ============================================================
+   INVERSE VIEW on TABLET (641px – 1023px): force desktop layout
+   ============================================================ */
+@media (max-width: 1023px) {
+  .view-inverse {
+    height: 100vh !important;
+    overflow: hidden !important;
+    justify-content: space-between !important;
+    padding: clamp(0.75rem, 1.5vw, 1.25rem) clamp(0.75rem, 2vw, 2rem) !important;
+    gap: 0.75rem !important;
+  }
+
+  .view-inverse .tv-header {
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+    padding-bottom: 0.8rem !important;
+  }
+
+  .view-inverse .tv-header-center {
+    flex-wrap: nowrap !important;
+    gap: 1rem !important;
+    width: auto !important;
+    align-items: center !important;
+  }
+
+  .view-inverse .tv-clock-box {
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    text-align: right !important;
+    width: auto !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .view-inverse .tv-stages-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: clamp(0.5rem, 1.2vw, 1rem) !important;
+    margin: 0.5rem 0 !important;
+  }
+
+  .view-inverse .tv-card {
+    padding: clamp(0.6rem, 1.2vw, 1.2rem) !important;
+    border-radius: 12px !important;
+  }
+
+  .view-inverse .tv-huge-number {
+    font-size: clamp(1.2rem, 3.5vw, 2.8rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .view-inverse .tv-target-serial {
+    font-size: clamp(1rem, 3vw, 2.4rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .view-inverse .tv-footer {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    padding-top: 0.5rem !important;
+  }
+
+  .view-inverse .tv-footer-stats {
+    flex-direction: row !important;
+    gap: 0.75rem !important;
+    width: auto !important;
+  }
+
+  .view-inverse .tv-total-badge {
+    width: auto !important;
+    background: transparent !important;
+    border: none !important;
+    font-size: 0.78rem !important;
+    padding: 0.35rem 0.5rem !important;
+  }
+}
+
+/* ============================================================
+   INVERSE VIEW on MOBILE (<=640px): also force desktop layout
+   (nested after tablet so specificity is fine with !important)
+   ============================================================ */
+@media (max-width: 640px) {
+  .view-inverse {
+    height: 100vh !important;
+    overflow: hidden !important;
+    justify-content: space-between !important;
+    padding: 0.75rem 0.5rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .view-inverse .tv-header {
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 0.4rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .view-inverse .tv-brand {
+    gap: 0.5rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .view-inverse .tv-brand-logo {
+    width: 2rem !important;
+    height: 2rem !important;
+    border-radius: 6px !important;
+  }
+
+  .view-inverse .tv-brand-logo svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .view-inverse .tv-title-group h1 {
+    font-size: 0.72rem !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  .view-inverse .tv-title-group .tv-subtitle {
+    font-size: 0.6rem !important;
+    display: none !important;
+  }
+
+  .view-inverse .tv-header-center {
+    flex-wrap: nowrap !important;
+    gap: 0.35rem !important;
+    width: auto !important;
+    align-items: center !important;
+    flex-shrink: 1 !important;
+    overflow: hidden !important;
+  }
+
+  .view-inverse .tv-badge {
+    padding: 0.2rem 0.4rem !important;
+    font-size: 0.6rem !important;
+    gap: 0.25rem !important;
+  }
+
+  .view-inverse .tv-btn {
+    padding: 0.25rem 0.4rem !important;
+    font-size: 0.6rem !important;
+    min-height: unset !important;
+    gap: 0.2rem !important;
+  }
+
+  .view-inverse .tv-btn span {
+    display: none !important;
+  }
+
+  .view-inverse .tv-view-toggle-label {
+    display: none !important;
+  }
+
+  .view-inverse .tv-clock-box {
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    text-align: right !important;
+    width: auto !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .view-inverse .tv-clock-time {
+    font-size: 0.75rem !important;
+  }
+
+  .view-inverse .tv-clock-date {
+    font-size: 0.55rem !important;
+  }
+
+  .view-inverse .tv-stages-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.35rem !important;
+    margin: 0.25rem 0 !important;
+  }
+
+  .view-inverse .tv-card {
+    padding: 0.45rem !important;
+    border-radius: 8px !important;
+  }
+
+  .view-inverse .tv-huge-number {
+    font-size: 1rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .view-inverse .tv-target-serial {
+    font-size: 0.85rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .view-inverse .tv-metric-label {
+    font-size: 0.6rem !important;
+  }
+
+  .view-inverse .tv-metric-subpill {
+    font-size: 0.55rem !important;
+    padding: 0.1rem 0.3rem !important;
+    flex-wrap: wrap !important;
+  }
+
+  .view-inverse .tv-stage-title-wrap h2 {
+    font-size: 0.75rem !important;
+  }
+
+  .view-inverse .tv-stage-title-wrap span {
+    font-size: 0.55rem !important;
+  }
+
+  .view-inverse .tv-stage-step-num {
+    font-size: 0.55rem !important;
+    padding: 0.1rem 0.3rem !important;
+  }
+
+  .view-inverse .tv-stage-icon-wrap {
+    width: 1.6rem !important;
+    height: 1.6rem !important;
+    border-radius: 6px !important;
+  }
+
+  .view-inverse .tv-stage-icon-wrap svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .view-inverse .tv-count-box {
+    padding: 0.3rem 0.25rem !important;
+    border-radius: 6px !important;
+  }
+
+  .view-inverse .tv-progress-track {
+    height: 6px !important;
+  }
+
+  .view-inverse .tv-progress-info {
+    font-size: 0.6rem !important;
+  }
+
+  .view-inverse .tv-progress-pct {
+    font-size: 0.7rem !important;
+  }
+
+  .view-inverse .tv-card-footer {
+    padding-top: 0.2rem !important;
+    flex-wrap: wrap !important;
+    gap: 0.2rem !important;
+  }
+
+  .view-inverse .tv-status-pill {
+    padding: 0.12rem 0.3rem !important;
+    font-size: 0.55rem !important;
+  }
+
+  .view-inverse .tv-remaining-text {
+    font-size: 0.55rem !important;
+  }
+
+  .view-inverse .tv-footer {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.4rem !important;
+    padding-top: 0.3rem !important;
+  }
+
+  .view-inverse .tv-footer-stats {
+    flex-direction: row !important;
+    gap: 0.4rem !important;
+    width: auto !important;
+  }
+
+  .view-inverse .tv-total-badge {
+    font-size: 0.6rem !important;
+    padding: 0.2rem 0.35rem !important;
+    background: transparent !important;
+    border: none !important;
+    width: auto !important;
+    gap: 0.2rem !important;
+  }
+
+  .view-inverse .tv-total-badge strong {
+    font-size: 0.65rem !important;
+  }
+
+  .view-inverse .tv-actions {
+    display: none !important;
+  }
+
+  .view-inverse .tv-stage-gap-connector {
+    height: 10px !important;
+  }
+}
