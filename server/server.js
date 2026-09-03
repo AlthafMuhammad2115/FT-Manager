@@ -192,12 +192,16 @@ setInterval(() => {
   if (productionState.shiftMode !== 'manual') {
     const expectedShift = getAutoShift();
     if (productionState.shift !== expectedShift) {
-      console.log(`[Shift Auto-Transition] Switching shift from "${productionState.shift}" to "${expectedShift}". Increasing target by 20.`);
       const oldShift = productionState.shift;
       productionState.shift = expectedShift;
       
-      // Auto-increment target by 20 at each shift change
-      if (productionState.stages) {
+      // Target count increases by +20 only after Morning Shift (6am-2pm) or Evening Shift (2pm-10pm) completes
+      const isMorningCompleted = oldShift && oldShift.includes('Morning Shift');
+      const isEveningCompleted = oldShift && oldShift.includes('Evening Shift');
+      const shouldIncrementTarget = isMorningCompleted || isEveningCompleted;
+
+      if (shouldIncrementTarget && productionState.stages) {
+        console.log(`[Shift Completion] ${oldShift} completed ➔ Transitioning to ${expectedShift}. Increasing target by +20 units.`);
         Object.keys(productionState.stages).forEach(stageKey => {
           const st = productionState.stages[stageKey];
           const tgtP = parseSerial(st.targetSerial);
@@ -205,17 +209,29 @@ setInterval(() => {
           st.targetSerial = formatSerial(tgtP.prefix, newTargetNum, tgtP.pad);
           normalizeStageData(st);
         });
+
+        const logEntry = {
+          id: 'shift-' + Date.now(),
+          timestamp: new Date().toISOString(),
+          stage: 'system',
+          stageName: 'Shift Scheduler',
+          message: `${oldShift} completed: Target Proteus increased by +20 units on all stages (Now: ${expectedShift})`,
+          operator: 'Auto Shift Engine'
+        };
+        productionState.logs.unshift(logEntry);
+      } else {
+        console.log(`[Shift Transition] Shift changed from "${oldShift}" to "${expectedShift}".`);
+        const logEntry = {
+          id: 'shift-' + Date.now(),
+          timestamp: new Date().toISOString(),
+          stage: 'system',
+          stageName: 'Shift Scheduler',
+          message: `Shift changed to ${expectedShift}`,
+          operator: 'Auto Shift Engine'
+        };
+        productionState.logs.unshift(logEntry);
       }
 
-      const logEntry = {
-        id: 'shift-' + Date.now(),
-        timestamp: new Date().toISOString(),
-        stage: 'system',
-        stageName: 'Shift Scheduler',
-        message: `Shift changed to ${expectedShift}: Target Proteus increased by +20 units on all stages`,
-        operator: 'Auto Shift Engine'
-      };
-      productionState.logs.unshift(logEntry);
       if (productionState.logs.length > 50) productionState.logs = productionState.logs.slice(0, 50);
       
       saveData(productionState);
@@ -234,10 +250,44 @@ if (fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
 }
 
-// Authentication Config & Endpoints
-const ADMIN_CREDENTIALS = {
-  username: process.env.ADMIN_USERNAME || 'admin_user',
-  passwords: [process.env.ADMIN_PASSWORD || 'admin_pass', 'admin_pass']
+// Authentication Accounts & Roles Configuration
+const ADMIN_ACCOUNTS = {
+  admin_anora: {
+    username: 'admin_anora',
+    passwords: ['Anora@12#'],
+    role: 'Super Administrator',
+    allowedStages: ['assembly', 'ft', 'dlc'],
+    canBatchConfig: true
+  },
+  admin_assembly: {
+    username: 'admin_assembly',
+    passwords: ['admin_pass'],
+    role: 'Assembly Line Supervisor',
+    allowedStages: ['assembly'],
+    canBatchConfig: false
+  },
+  admin_ft: {
+    username: 'admin_ft',
+    passwords: ['admin_pass'],
+    role: 'FT Station Supervisor',
+    allowedStages: ['ft'],
+    canBatchConfig: false
+  },
+  admin_dlc: {
+    username: 'admin_dlc',
+    passwords: ['admin_pass'],
+    role: 'DLC Station Supervisor',
+    allowedStages: ['dlc'],
+    canBatchConfig: false
+  },
+  // Backwards compatibility
+  admin_user: {
+    username: 'admin_user',
+    passwords: ['admin_pass'],
+    role: 'Administrator',
+    allowedStages: ['assembly', 'ft', 'dlc'],
+    canBatchConfig: true
+  }
 };
 
 app.post('/api/auth/login', (req, res) => {
@@ -246,11 +296,11 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(400).json({ success: false, message: 'Username and password are required' });
   }
 
-  const validUsername = username.trim().toLowerCase() === ADMIN_CREDENTIALS.username.toLowerCase();
-  const validPassword = ADMIN_CREDENTIALS.passwords.includes(password.trim());
+  const userKey = username.trim().toLowerCase();
+  const account = ADMIN_ACCOUNTS[userKey];
 
-  if (validUsername && validPassword) {
-    const token = 'token-' + Buffer.from(`${username}-${Date.now()}`).toString('base64');
+  if (account && account.passwords.includes(password.trim())) {
+    const token = 'token-' + Buffer.from(`${account.username}-${Date.now()}`).toString('base64');
     
     // Log admin login event
     const logEntry = {
@@ -258,8 +308,8 @@ app.post('/api/auth/login', (req, res) => {
       timestamp: new Date().toISOString(),
       stage: 'system',
       stageName: 'Security',
-      message: `Admin user '${username}' authenticated successfully`,
-      operator: username
+      message: `Admin user '${account.username}' (${account.role}) authenticated successfully`,
+      operator: account.username
     };
     productionState.logs.unshift(logEntry);
     if (productionState.logs.length > 50) productionState.logs = productionState.logs.slice(0, 50);
@@ -269,8 +319,10 @@ app.post('/api/auth/login', (req, res) => {
       success: true,
       token,
       user: {
-        username: username.trim(),
-        role: 'Supervisor / Administrator',
+        username: account.username,
+        role: account.role,
+        allowedStages: account.allowedStages,
+        canBatchConfig: account.canBatchConfig,
         authenticatedAt: new Date().toISOString()
       }
     });
@@ -285,13 +337,30 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/auth/verify', (req, res) => {
   const { token } = req.body;
   if (token && token.startsWith('token-')) {
-    return res.json({
-      success: true,
-      user: {
-        username: 'admin',
-        role: 'Supervisor / Administrator'
-      }
-    });
+    try {
+      const decoded = Buffer.from(token.replace('token-', ''), 'base64').toString('utf8');
+      const uname = decoded.split('-')[0].toLowerCase();
+      const account = ADMIN_ACCOUNTS[uname] || ADMIN_ACCOUNTS.admin_anora;
+      return res.json({
+        success: true,
+        user: {
+          username: account.username,
+          role: account.role,
+          allowedStages: account.allowedStages,
+          canBatchConfig: account.canBatchConfig
+        }
+      });
+    } catch (e) {
+      return res.json({
+        success: true,
+        user: {
+          username: 'admin_anora',
+          role: 'Super Administrator',
+          allowedStages: ['assembly', 'ft', 'dlc'],
+          canBatchConfig: true
+        }
+      });
+    }
   }
   return res.status(401).json({ success: false, message: 'Invalid or expired session' });
 });

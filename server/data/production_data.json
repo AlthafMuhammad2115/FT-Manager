@@ -1,51 +1,163 @@
 {
   "productName": "PROTEUS",
-  "shift": "Morning Shift (06:00 - 14:00)",
-  "lastUpdated": "2026-08-31T04:46:13.440Z",
+  "shift": "Evening Shift (14:00 - 22:00)",
+  "lastUpdated": "2026-09-03T10:03:19.746Z",
   "stages": {
     "assembly": {
       "id": "assembly",
       "name": "Assembly",
       "subtext": "Mechanical & Sub-Assembly",
-      "target": 820,
+      "target": 880,
       "current": 669,
       "hourlyRate": 15.5,
       "startSerial": "PST20001",
       "currentSerial": "PST20669",
-      "targetSerial": "PST20820",
+      "targetSerial": "PST20880",
       "currentCount": 669,
-      "targetCount": 820
+      "targetCount": 880
     },
     "ft": {
       "id": "ft",
       "name": "FT",
       "fullName": "Functional Testing",
       "subtext": "Automated QA & Electrical Diagnostics",
-      "target": 800,
+      "target": 860,
       "current": 656,
       "hourlyRate": 12.2,
       "startSerial": "PST20001",
       "currentSerial": "PST20656",
-      "targetSerial": "PST20800",
+      "targetSerial": "PST20860",
       "currentCount": 656,
-      "targetCount": 800
+      "targetCount": 860
     },
     "dlc": {
       "id": "dlc",
       "name": "DLC",
       "fullName": "Device Life Cycle",
       "subtext": "Final Calibration & Burn-In",
-      "target": 800,
+      "target": 860,
       "current": 654,
       "hourlyRate": 10.1,
       "startSerial": "PST20001",
       "currentSerial": "PST20654",
-      "targetSerial": "PST20800",
+      "targetSerial": "PST20860",
       "currentCount": 654,
-      "targetCount": 800
+      "targetCount": 860
     }
   },
   "logs": [
+    {
+      "id": "auth-1788429799746",
+      "timestamp": "2026-09-03T10:03:19.746Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_assembly' (Assembly Line Supervisor) authenticated successfully",
+      "operator": "admin_assembly"
+    },
+    {
+      "id": "auth-1788429297144",
+      "timestamp": "2026-09-03T09:54:57.144Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_assembly' (Assembly Line Supervisor) authenticated successfully",
+      "operator": "admin_assembly"
+    },
+    {
+      "id": "auth-1788429248846",
+      "timestamp": "2026-09-03T09:54:08.846Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_anora' (Super Administrator) authenticated successfully",
+      "operator": "admin_anora"
+    },
+    {
+      "id": "auth-1788429184744",
+      "timestamp": "2026-09-03T09:53:04.744Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_anora' (Super Administrator) authenticated successfully",
+      "operator": "admin_anora"
+    },
+    {
+      "id": "auth-1788429017403",
+      "timestamp": "2026-09-03T09:50:17.403Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_anora' (Super Administrator) authenticated successfully",
+      "operator": "admin_anora"
+    },
+    {
+      "id": "auth-1788428218071",
+      "timestamp": "2026-09-03T09:36:58.071Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_anora' (Super Administrator) authenticated successfully",
+      "operator": "admin_anora"
+    },
+    {
+      "id": "auth-1788428090336",
+      "timestamp": "2026-09-03T09:34:50.336Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_assembly' (Assembly Line Supervisor) authenticated successfully",
+      "operator": "admin_assembly"
+    },
+    {
+      "id": "auth-1788427661027",
+      "timestamp": "2026-09-03T09:27:41.027Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_anora' (Super Administrator) authenticated successfully",
+      "operator": "admin_anora"
+    },
+    {
+      "id": "auth-1788427661025",
+      "timestamp": "2026-09-03T09:27:41.025Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_dlc' (DLC Station Supervisor) authenticated successfully",
+      "operator": "admin_dlc"
+    },
+    {
+      "id": "auth-1788427661022",
+      "timestamp": "2026-09-03T09:27:41.022Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_ft' (FT Station Supervisor) authenticated successfully",
+      "operator": "admin_ft"
+    },
+    {
+      "id": "auth-1788427661017",
+      "timestamp": "2026-09-03T09:27:41.017Z",
+      "stage": "system",
+      "stageName": "Security",
+      "message": "Admin user 'admin_assembly' (Assembly Line Supervisor) authenticated successfully",
+      "operator": "admin_assembly"
+    },
+    {
+      "id": "shift-1788424201930",
+      "timestamp": "2026-09-03T08:30:01.930Z",
+      "stage": "system",
+      "stageName": "Shift Scheduler",
+      "message": "Shift changed to Evening Shift (14:00 - 22:00): Target Proteus increased by +20 units on all stages",
+      "operator": "Auto Shift Engine"
+    },
+    {
+      "id": "shift-1788324798404",
+      "timestamp": "2026-09-02T04:53:18.404Z",
+      "stage": "system",
+      "stageName": "Shift Scheduler",
+      "message": "Shift changed to Morning Shift (06:00 - 14:00): Target Proteus increased by +20 units on all stages",
+      "operator": "Auto Shift Engine"
+    },
+    {
+      "id": "shift-1788291856289",
+      "timestamp": "2026-09-01T19:44:16.289Z",
+      "stage": "system",
+      "stageName": "Shift Scheduler",
+      "message": "Shift changed to Off-Shift (22:00 - 06:00): Target Proteus increased by +20 units on all stages",
+      "operator": "Auto Shift Engine"
+    },
     {
       "id": "shift-1788151573440",
       "timestamp": "2026-08-31T04:46:13.440Z",

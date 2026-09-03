@@ -60,6 +60,7 @@ export function App() {
   const handleLoginSuccess = (user) => {
     setIsAuthenticated(true);
     setAdminUser(user);
+    navigateToAdmin();
   };
 
   const handleLogout = () => {
@@ -67,23 +68,26 @@ export function App() {
     localStorage.removeItem('proteus_admin_user');
     setIsAuthenticated(false);
     setAdminUser(null);
+    navigateToDashboard();
   };
 
   return (
     <ProductionProvider>
-      {currentView === 'dashboard' ? (
-        <Dashboard onOpenAdmin={navigateToAdmin} />
-      ) : isAuthenticated ? (
-        <AdminPanel
-          adminUser={adminUser}
-          onBackToDashboard={navigateToDashboard}
-          onLogout={handleLogout}
-        />
+      {currentView === 'admin' ? (
+        isAuthenticated ? (
+          <AdminPanel
+            adminUser={adminUser}
+            onBackToDashboard={navigateToDashboard}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <AdminLogin
+            onLoginSuccess={handleLoginSuccess}
+            onCancel={navigateToDashboard}
+          />
+        )
       ) : (
-        <AdminLogin
-          onLoginSuccess={handleLoginSuccess}
-          onCancel={navigateToDashboard}
-        />
+        <Dashboard onOpenAdmin={navigateToAdmin} />
       )}
     </ProductionProvider>
   );

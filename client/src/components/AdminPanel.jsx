@@ -72,6 +72,25 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
   const [confirmResetModal, setConfirmResetModal] = useState(false);
   const [batchTargetSerial, setBatchTargetSerial] = useState('PST20500');
 
+  // Compute allowed stages for the current admin user
+  const allowedStages = useMemo(() => {
+    if (adminUser?.allowedStages && Array.isArray(adminUser.allowedStages)) {
+      return adminUser.allowedStages;
+    }
+    const uname = (adminUser?.username || '').toLowerCase();
+    if (uname === 'admin_anora' || uname === 'admin_user') return ['assembly', 'ft', 'dlc'];
+    if (uname === 'admin_assembly') return ['assembly'];
+    if (uname === 'admin_ft') return ['ft'];
+    if (uname === 'admin_dlc') return ['dlc'];
+    return ['assembly', 'ft', 'dlc'];
+  }, [adminUser]);
+
+  const canBatchConfig = useMemo(() => {
+    if (typeof adminUser?.canBatchConfig === 'boolean') return adminUser.canBatchConfig;
+    const uname = (adminUser?.username || '').toLowerCase();
+    return uname === 'admin_anora' || uname === 'admin_user';
+  }, [adminUser]);
+
   // Always auto-detect shift — not editable
   const currentShift = useMemo(() => getAutoShift(), []);
 
@@ -91,6 +110,10 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
   };
 
   const handleSaveStage = (stageKey) => {
+    if (!allowedStages.includes(stageKey)) {
+      showToast(`Unauthorized: You do not have permission to edit ${stages[stageKey]?.name || stageKey}`);
+      return;
+    }
     const { currentSerial, targetSerial } = serialInputs[stageKey];
     setStageSerial({
       stage: stageKey,
@@ -102,11 +125,19 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
   };
 
   const handleQuickDelta = (stageKey, delta) => {
+    if (!allowedStages.includes(stageKey)) {
+      showToast(`Unauthorized: You do not have permission to edit ${stages[stageKey]?.name || stageKey}`);
+      return;
+    }
     incrementCount(stageKey, delta, `${adminUser?.username || 'Admin'} (${delta > 0 ? '+' : ''}${delta})`);
     showToast(`${delta > 0 ? '+' : ''}${delta} Proteus advanced on ${stages[stageKey]?.name}`);
   };
 
   const handleApplyBatchRange = () => {
+    if (!canBatchConfig) {
+      showToast('Unauthorized: Super Admin credentials required for batch configuration');
+      return;
+    }
     resetProduction({
       mode: 'next_batch',
       newTargetSerial: batchTargetSerial,
@@ -120,15 +151,23 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
   const renderStageCard = (stageKey, title, Icon, colorClass) => {
     const stageObj = stages[stageKey] || { currentSerial: 'PST20001', targetSerial: 'PST20200', currentCount: 0, targetCount: 200 };
     const localVals = serialInputs[stageKey] || { currentSerial: stageObj.currentSerial, targetSerial: stageObj.targetSerial };
+    const canEdit = allowedStages.includes(stageKey);
 
     return (
-      <div className={`admin-card ${colorClass}`}>
+      <div className={`admin-card ${colorClass} ${!canEdit ? 'is-locked' : ''}`}>
         <div className="admin-card-header">
           <div className="admin-stage-badge">
-            <Icon size={20} color="#ea580c" />
+            <Icon size={20} color={canEdit ? '#ea580c' : '#64748b'} />
             <span>{title}</span>
           </div>
-          <span className="admin-tag-synced">Sync Active</span>
+          {canEdit ? (
+            <span className="admin-tag-synced">Edit Access Active</span>
+          ) : (
+            <span className="admin-tag-locked">
+              <Lock size={12} />
+              <span>Read-Only</span>
+            </span>
+          )}
         </div>
 
         {/* Live Serial Number Display */}
@@ -137,7 +176,7 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
             <div className="admin-label-muted">
               <span className="text-red-highlight">CURRENT</span> PROTEUS
             </div>
-            <div className="admin-big-count">
+            <div className="admin-big-count" style={{ color: canEdit ? 'var(--color-orange-bright)' : '#94a3b8' }}>
               {stageObj.currentSerial}
             </div>
             <div className="admin-subtext-white">
@@ -158,20 +197,41 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
         </div>
 
         {/* Quick Tap Serial Advance Buttons */}
-        <div className="admin-section-subtitle">
-          QUICK PROTEUS ADVANCE
+        <div className="admin-section-subtitle" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>QUICK PROTEUS ADVANCE</span>
+          {!canEdit && <span style={{ fontSize: '0.7rem', color: '#64748b' }}>(Locked for your account)</span>}
         </div>
         <div className="admin-quick-buttons">
-          <button className="quick-btn quick-btn-dec" onClick={() => handleQuickDelta(stageKey, -1)} title="Previous Serial (-1)">
+          <button 
+            className="quick-btn quick-btn-dec" 
+            onClick={() => handleQuickDelta(stageKey, -1)} 
+            disabled={!canEdit}
+            title={canEdit ? "Previous Serial (-1)" : "Locked"}
+          >
             -1
           </button>
-          <button className="quick-btn" onClick={() => handleQuickDelta(stageKey, 1)} title="Next Serial (+1)">
+          <button 
+            className="quick-btn" 
+            onClick={() => handleQuickDelta(stageKey, 1)} 
+            disabled={!canEdit}
+            title={canEdit ? "Next Serial (+1)" : "Locked"}
+          >
             +1
           </button>
-          <button className="quick-btn" onClick={() => handleQuickDelta(stageKey, 5)} title="+5 Serials">
+          <button 
+            className="quick-btn" 
+            onClick={() => handleQuickDelta(stageKey, 5)} 
+            disabled={!canEdit}
+            title={canEdit ? "+5 Serials" : "Locked"}
+          >
             +5
           </button>
-          <button className="quick-btn" onClick={() => handleQuickDelta(stageKey, 10)} title="+10 Serials">
+          <button 
+            className="quick-btn" 
+            onClick={() => handleQuickDelta(stageKey, 10)} 
+            disabled={!canEdit}
+            title={canEdit ? "+10 Serials" : "Locked"}
+          >
             +10
           </button>
         </div>
@@ -180,7 +240,7 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
         <div className="admin-form-divider">
           <div className="admin-form-group">
             <label className="admin-input-label">
-              <ScanLine size={14} color="#ea580c" />
+              <ScanLine size={14} color={canEdit ? "#ea580c" : "#64748b"} />
               <span>Current Proteus (Scan / Type)</span>
             </label>
             <input
@@ -189,6 +249,7 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
               value={localVals.currentSerial}
               onChange={(e) => handleSerialChange(stageKey, 'currentSerial', e.target.value)}
               placeholder="e.g. PST20145"
+              disabled={!canEdit}
             />
           </div>
 
@@ -200,17 +261,29 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
               value={localVals.targetSerial}
               onChange={(e) => handleSerialChange(stageKey, 'targetSerial', e.target.value)}
               placeholder="e.g. PST20500"
+              disabled={!canEdit}
             />
           </div>
 
-          <button 
-            className="btn-orange-solid" 
-            style={{ width: '100%', marginTop: '0.6rem' }}
-            onClick={() => handleSaveStage(stageKey)}
-          >
-            <Save size={16} />
-            <span>Set / Save {stageObj.name || title}</span>
-          </button>
+          {canEdit ? (
+            <button 
+              className="btn-orange-solid" 
+              style={{ width: '100%', marginTop: '0.6rem' }}
+              onClick={() => handleSaveStage(stageKey)}
+            >
+              <Save size={16} />
+              <span>Set / Save {stageObj.name || title}</span>
+            </button>
+          ) : (
+            <button 
+              className="btn-locked-stage" 
+              disabled
+              style={{ width: '100%', marginTop: '0.6rem' }}
+            >
+              <Lock size={15} />
+              <span>Locked: {stageObj.name || title} Supervisor Only</span>
+            </button>
+          )}
         </div>
       </div>
     );
@@ -241,12 +314,22 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
           <div className="admin-user-pill">
             <span className="admin-user-dot" />
             <span>Admin: <strong>{adminUser?.username || 'admin'}</strong></span>
+            <span className="admin-role-badge">
+              {canBatchConfig ? 'Super Admin' : (adminUser?.role || 'Station Supervisor')}
+            </span>
           </div>
 
-          <button className="btn-orange-pill" onClick={() => setConfirmResetModal(true)}>
-            <QrCode size={15} />
-            <span>Batch Range Config</span>
-          </button>
+          {canBatchConfig ? (
+            <button className="btn-orange-pill" onClick={() => setConfirmResetModal(true)}>
+              <QrCode size={15} />
+              <span>Batch Range Config</span>
+            </button>
+          ) : (
+            <button className="btn-orange-pill" disabled title="Requires Super Admin (admin_anora)">
+              <Lock size={13} />
+              <span>Batch Config (Locked)</span>
+            </button>
+          )}
 
           <button className="btn-dark-pill" onClick={onLogout} title="Lock Admin Session">
             <span>Lock / Logout</span>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ShieldCheck, Lock, User, Eye, EyeOff, ArrowLeft, AlertCircle } from 'lucide-react';
 import { getApiUrl } from '../config/api';
 
-export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
+export const AdminLogin = ({ onLoginSuccess, onCancel, isGateway = false }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -40,16 +40,55 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
       }
     } catch (err) {
       // Fallback local verification if server is unreachable
-      if (
-        (username.trim().toLowerCase() === 'admin_user') &&
-        (password.trim() === 'admin_pass')
-      ) {
-        const dummyUser = { username: 'admin_user', role: 'Supervisor / Administrator' };
+      const u = username.trim().toLowerCase();
+      const p = password.trim();
+
+      const LOCAL_ACCOUNTS = {
+        admin_anora: {
+          password: 'Anora@12#',
+          role: 'Super Administrator',
+          allowedStages: ['assembly', 'ft', 'dlc'],
+          canBatchConfig: true
+        },
+        admin_assembly: {
+          password: 'admin_pass',
+          role: 'Assembly Line Supervisor',
+          allowedStages: ['assembly'],
+          canBatchConfig: false
+        },
+        admin_ft: {
+          password: 'admin_pass',
+          role: 'FT Station Supervisor',
+          allowedStages: ['ft'],
+          canBatchConfig: false
+        },
+        admin_dlc: {
+          password: 'admin_pass',
+          role: 'DLC Station Supervisor',
+          allowedStages: ['dlc'],
+          canBatchConfig: false
+        },
+        admin_user: {
+          password: 'admin_pass',
+          role: 'Administrator',
+          allowedStages: ['assembly', 'ft', 'dlc'],
+          canBatchConfig: true
+        }
+      };
+
+      if (LOCAL_ACCOUNTS[u] && LOCAL_ACCOUNTS[u].password === p) {
+        const dummyUser = {
+          username: u,
+          role: LOCAL_ACCOUNTS[u].role,
+          allowedStages: LOCAL_ACCOUNTS[u].allowedStages,
+          canBatchConfig: LOCAL_ACCOUNTS[u].canBatchConfig,
+          authenticatedAt: new Date().toISOString()
+        };
         localStorage.setItem('proteus_admin_token', 'local-token-' + Date.now());
         localStorage.setItem('proteus_admin_user', JSON.stringify(dummyUser));
         onLoginSuccess(dummyUser);
       } else {
-        setErrorMessage('Authentication failed. Check credentials.');
+        setErrorMessage('Invalid username or password. Please check your credentials.');
       }
     } finally {
       setLoading(false);
@@ -58,7 +97,7 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
 
   return (
     <div className="login-overlay">
-      <div className="login-backdrop" onClick={onCancel} />
+      <div className="login-backdrop" onClick={!isGateway ? onCancel : undefined} />
       
       <div className="login-card">
         {/* Top Glow & Header */}
@@ -66,8 +105,8 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
           <div className="login-icon-badge">
             <ShieldCheck size={32} />
           </div>
-          <h2>Admin Authentication</h2>
-          <p>Restricted access for Proteus line supervisors & engineers</p>
+          <h2>{isGateway ? 'Proteus Production Portal' : 'Admin Authentication'}</h2>
+          <p>{isGateway ? 'Sign in with authorized credentials to access live production line tracker' : 'Restricted access for Proteus line supervisors & engineers'}</p>
         </div>
 
         {/* Error Notification */}
@@ -91,7 +130,7 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username..."
+                placeholder="Enter username"
                 autoFocus
                 autoComplete="off"
                 required
@@ -134,23 +173,25 @@ export const AdminLogin = ({ onLoginSuccess, onCancel }) => {
               disabled={loading}
             >
               {loading ? (
-                <span>Verifying...</span>
+                <span>Verifying credentials...</span>
               ) : (
                 <>
                   <Lock size={18} />
-                  <span>Unlock Admin Console</span>
+                  <span>{isGateway ? 'Sign In / Enter System' : 'Unlock Admin Console'}</span>
                 </>
               )}
             </button>
 
-            <button
-              type="button"
-              className="btn-login-back"
-              onClick={onCancel}
-            >
-              <ArrowLeft size={16} />
-              <span>Return to TV Display</span>
-            </button>
+            {!isGateway && onCancel && (
+              <button
+                type="button"
+                className="btn-login-back"
+                onClick={onCancel}
+              >
+                <ArrowLeft size={16} />
+                <span>Return to TV Display</span>
+              </button>
+            )}
           </div>
         </form>
       </div>

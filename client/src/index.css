@@ -109,6 +109,102 @@ html, body, #root {
   gap: 0.75rem;
 }
 
+/* Fullscreen Mode: Only 3 Stage Cards & Top-Right Exit Button */
+.tv-container.is-fullscreen {
+  height: 100vh;
+  min-height: 100vh;
+  padding: 1.5rem clamp(1rem, 2.5vw, 3rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  gap: 0;
+}
+
+.tv-container.is-fullscreen .tv-stages-grid {
+  width: 100%;
+  max-width: 1540px;
+  max-height: 84vh;
+  height: auto;
+  margin: auto 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(1rem, 1.6vw, 2rem);
+  align-items: stretch;
+}
+
+.tv-container.is-fullscreen .tv-card {
+  max-height: 84vh;
+  padding: clamp(1.2rem, 1.8vw, 2rem);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.8),
+    0 0 35px rgba(234, 88, 12, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.tv-container.is-fullscreen .tv-card-body {
+  margin: 0.75rem 0;
+  gap: 0.6rem;
+}
+
+.tv-container.is-fullscreen .tv-count-box {
+  padding: clamp(0.75rem, 1.2vw, 1.25rem);
+}
+
+.tv-container.is-fullscreen .tv-huge-number {
+  font-size: clamp(2.4rem, 3.8vw, 3.8rem);
+}
+
+/* Floating Exit Button at Top Right Corner in Fullscreen Mode */
+.tv-btn-fullscreen-exit {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.5rem;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(11, 16, 25, 0.88);
+  border: 1px solid rgba(234, 88, 12, 0.5);
+  color: #ffffff;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.7),
+    0 0 20px rgba(234, 88, 12, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fade-in-down 0.3s ease-out;
+}
+
+.tv-btn-fullscreen-exit:hover {
+  background: var(--color-orange-primary);
+  border-color: var(--color-orange-bright);
+  box-shadow: 0 10px 35px rgba(234, 88, 12, 0.55);
+  transform: translateY(-2px);
+}
+
+.tv-btn-fullscreen-exit:active {
+  transform: translateY(0);
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Header Area */
 .tv-header {
   display: flex;
@@ -750,6 +846,19 @@ html, body, #root {
   transform: translateY(-1px);
 }
 
+.tv-btn-logout {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
+.tv-btn-logout:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
 /* ============================================================
    ADMIN PANEL & APPBAR STYLES (Reflected from screenshot)
    ============================================================ */
@@ -1006,6 +1115,39 @@ html, body, #root {
   border-radius: 4px;
 }
 
+.admin-tag-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.admin-role-badge {
+  background: rgba(234, 88, 12, 0.2);
+  color: #fb923c;
+  border: 1px solid rgba(234, 88, 12, 0.35);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  margin-left: 0.4rem;
+}
+
+.admin-card.is-locked {
+  opacity: 0.78;
+  border-color: #1e2638;
+}
+
+.admin-card.is-locked:hover {
+  opacity: 0.88;
+}
+
 .admin-current-display {
   display: flex;
   align-items: baseline;
@@ -1164,6 +1306,43 @@ html, body, #root {
 
 .btn-orange-solid:active {
   transform: translateY(0);
+}
+
+.btn-orange-solid:disabled,
+.btn-orange-pill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+.quick-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.admin-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #05070a;
+  border-color: #141b24;
+  color: #64748b;
+}
+
+.btn-locked-stage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #111722;
+  color: #64748b;
+  border: 1px solid #1e2838;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: not-allowed;
 }
 
 /* Log Panel */

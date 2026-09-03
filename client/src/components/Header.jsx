@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Activity, Clock, Cpu, Maximize, Minimize, Settings, Radio, Monitor, Smartphone } from 'lucide-react';
+import { Activity, Clock, Cpu, Maximize, Minimize, Settings, Radio, Monitor, Smartphone, LogOut } from 'lucide-react';
 import { useProduction } from '../context/ProductionContext';
 
 // Auto shift detection based on current time (matches server logic)
@@ -14,10 +14,9 @@ function getAutoShift() {
   }
 }
 
-export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode }) => {
+export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode, isFullscreen = false, onToggleFullscreen }) => {
   const { data, connected } = useProduction();
   const [time, setTime] = useState(new Date());
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -26,16 +25,18 @@ export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode }) => 
     return () => clearInterval(timer);
   }, []);
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
-      });
-      setIsFullscreen(true);
+  const handleFullscreenClick = () => {
+    if (onToggleFullscreen) {
+      onToggleFullscreen();
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
       }
     }
   };
@@ -84,7 +85,7 @@ export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode }) => 
         <button 
           className="tv-btn tv-btn-primary" 
           onClick={onOpenAdmin}
-          title="Open Admin Control Panel"
+          title="Open Admin Edit Controls"
           id="btn-admin-panel"
         >
           <Settings size={16} />
@@ -108,7 +109,7 @@ export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode }) => 
 
         <button 
           className="tv-btn" 
-          onClick={toggleFullscreen}
+          onClick={handleFullscreenClick}
           title="Toggle Fullscreen (F11)"
           id="btn-fullscreen"
         >

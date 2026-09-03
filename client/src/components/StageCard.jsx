@@ -67,9 +67,9 @@ export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
           </div>
 
           <div className="tv-metric-subpill">
-            <span>Shift Target:</span>
-            <strong>{targetCount} Units</strong>
-            <span className="tv-subpill-divider">•</span>
+            {/* <span>Shift Target:</span>
+            <strong>{targetCount} Units</strong> */}
+            {/* <span className="tv-subpill-divider">•</span> */}
             <span>Remaining: <strong className={remaining > 0 ? 'text-remaining-warn' : 'text-remaining-good'}>{remaining}</strong></span>
           </div>
         </div>
@@ -109,10 +109,10 @@ export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
             {currentSerial}
           </div>
 
-          <div className="tv-metric-subpill">
+          {/* <div className="tv-metric-subpill">
             <span>Completed Today:</span>
             <strong>{currentCount} Units</strong>
-          </div>
+          </div> */}
         </div>
 
         {/* Completion Progress Bar */}
