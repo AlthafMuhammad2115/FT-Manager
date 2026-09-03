@@ -2,18 +2,18 @@
 const isProduction = import.meta.env.PROD;
 
 // Default production backend hosted on Render
-// const DEFAULT_RENDER_BACKEND = 'https://ft-manager.onrender.com';
+const DEFAULT_RENDER_BACKEND = 'https://ft-manager.onrender.com';
 
 // API Base URL resolution:
 // 1. Custom env var VITE_API_URL if configured (e.g. in Vercel project settings)
 // 2. Default Render backend URL in production
 // 3. Empty string in local dev (relies on Vite proxy to http://localhost:5000)
-// export const API_BASE_URL = (
-//   import.meta.env.VITE_API_URL ||
-//   (isProduction ? DEFAULT_RENDER_BACKEND : '')
-// ).replace(/\/$/, '');
+export const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  (isProduction ? DEFAULT_RENDER_BACKEND : '')
+).replace(/\/$/, '');
 
-export const API_BASE_URL = 'http://localhost:5000'
+// export const API_BASE_URL = 'http://localhost:5000'
 
 // Socket.io URL resolution
 export const SOCKET_URL = (
