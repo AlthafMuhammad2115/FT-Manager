@@ -3,8 +3,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
 const mongoose = require('mongoose');
 const ProductionModel = require('./models/Production');
 
@@ -315,12 +313,6 @@ setInterval(() => {
 app.use(cors());
 app.use(express.json());
 
-// Serve production build of client if exists
-const clientDist = path.join(__dirname, '..', 'client', 'dist');
-if (fs.existsSync(clientDist)) {
-  app.use(express.static(clientDist));
-}
-
 // ==========================================
 // AUTHENTICATION
 // ==========================================
@@ -445,6 +437,20 @@ app.post('/api/auth/verify', (req, res) => {
 // 1. Get full production state (called once on dashboard mount)
 app.get('/api/production', (req, res) => {
   res.json({ success: true, data: buildFullState(productionState) });
+});
+
+// 1b. Get current batch count range
+// GET /api/production/batch/range
+// Response: { "start_count": 21101, "end_count": 21150 }
+app.get('/api/production/batch/range', (req, res) => {
+  const units = productionState.units || [];
+  const startNum = units.length > 0 ? units[0].num : (productionState.startNum || 20001);
+  const endNum = units.length > 0 ? units[units.length - 1].num : (startNum + (productionState.dailyTarget || 50) - 1);
+
+  res.json({
+    start_count: startNum,
+    end_count: endNum
+  });
 });
 
 // 2. Toggle a single unit's status at a given stage
@@ -575,14 +581,19 @@ app.post('/api/production/configure', (req, res) => {
   });
 });
 
-// Catch-all for React SPA routing
-app.get('*', (req, res) => {
-  const indexPath = path.join(clientDist, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.json({ message: 'Proteus Production Backend Running', status: 'OK' });
-  }
+// Root health / API info endpoint
+app.get('/', (req, res) => {
+  res.json({
+    status: 'OK',
+    service: 'Proteus Production Backend API',
+    endpoints: {
+      production: '/api/production',
+      batchRange: '/api/production/batch/range',
+      updateStatus: '/api/production/unit/status',
+      configure: '/api/production/configure',
+      authLogin: '/api/auth/login'
+    }
+  });
 });
 
 // ==========================================
@@ -651,8 +662,8 @@ io.on('connection', (socket) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`====================================================`);
   console.log(` PROTEUS PRODUCTION TRACKER (5-STAGE CASCADE)       `);
-  console.log(` Local:            http://localhost:${PORT}`);
-  console.log(` TV Display View:  http://localhost:${PORT}`);
-  console.log(` Admin Panel View: http://localhost:${PORT}/#admin`);
+  console.log(` Backend API:      http://localhost:${PORT}`);
+  console.log(` Production API:   http://localhost:${PORT}/api/production`);
+  console.log(` Range API:        http://localhost:${PORT}/api/production/batch/range`);
   console.log(`====================================================`);
 });
