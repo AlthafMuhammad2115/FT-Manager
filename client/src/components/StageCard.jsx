@@ -2,13 +2,13 @@ import React, { useMemo } from 'react';
 import { Layers, Activity, ShieldCheck, CheckCircle2, TrendingUp, AlertCircle, QrCode, Target, ChevronUp, ChevronsUp, Sparkles } from 'lucide-react';
 
 export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
-  const currentSerial = stageData?.currentSerial || 'PST20001';
-  const targetSerial = stageData?.targetSerial || 'PST20200';
-  const startSerial = stageData?.startSerial || 'PST20001';
+  const currentSerial = stageData?.currentSerial || '---';
+  const targetSerial = stageData?.targetSerial || '---';
+  const startSerial = stageData?.startSerial || '---';
   const currentCount = stageData?.currentCount ?? stageData?.current ?? 0;
-  const targetCount = stageData?.targetCount ?? stageData?.target ?? 200;
+  const targetCount = stageData?.targetCount ?? stageData?.target ?? 0;
 
-  const percentage = Math.min(100, Math.round((currentCount / (targetCount > 0 ? targetCount : 1)) * 100));
+  const percentage = targetCount > 0 ? Math.min(100, Math.round((currentCount / targetCount) * 100)) : 0;
   const remaining = Math.max(0, targetCount - currentCount);
   const isCompleted = currentCount >= targetCount && targetCount > 0;
 
@@ -67,9 +67,8 @@ export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
           </div>
 
           <div className="tv-metric-subpill">
-            {/* <span>Shift Target:</span>
-            <strong>{targetCount} Units</strong> */}
-            {/* <span className="tv-subpill-divider">•</span> */}
+            <span>Target: <strong>{targetCount} Units</strong></span>
+            <span className="tv-subpill-divider">•</span>
             <span>Remaining: <strong className={remaining > 0 ? 'text-remaining-warn' : 'text-remaining-good'}>{remaining}</strong></span>
           </div>
         </div>
@@ -109,10 +108,9 @@ export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
             {currentSerial}
           </div>
 
-          {/* <div className="tv-metric-subpill">
-            <span>Completed Today:</span>
-            <strong>{currentCount} Units</strong>
-          </div> */}
+          <div className="tv-metric-subpill">
+            <span>Completed: <strong>{currentCount} Units</strong></span>
+          </div>
         </div>
 
         {/* Completion Progress Bar */}

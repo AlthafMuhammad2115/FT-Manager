@@ -7,14 +7,13 @@ const ProductionContext = createContext(null);
 export const ProductionProvider = ({ children }) => {
   const [data, setData] = useState({
     productName: 'PROTEUS',
-    shift: 'Shift 1 (Day)',
-    lastUpdated: new Date().toISOString(),
+    shift: '',
+    lastUpdated: '',
     stages: {
-      assembly: { id: 'assembly', name: 'Assembly', subtext: 'Mechanical & Sub-Assembly Build', startSerial: 'PST20001', currentSerial: 'PST20129', targetSerial: 'PST20200', targetCount: 200, currentCount: 129 },
-      ft: { id: 'ft', name: 'FT', fullName: 'Functional Testing', subtext: 'Automated QA & Diagnostics', startSerial: 'PST20001', currentSerial: 'PST20098', targetSerial: 'PST20200', targetCount: 200, currentCount: 98 },
-      dlc: { id: 'dlc', name: 'DLC', fullName: 'Device Life Cycle', subtext: 'Final Calibration & Burn-In', startSerial: 'PST20001', currentSerial: 'PST20082', targetSerial: 'PST20200', targetCount: 200, currentCount: 82 }
-    },
-    logs: []
+      assembly: { id: 'assembly', name: 'Assembly', subtext: 'Mechanical & Sub-Assembly Build', startSerial: '', currentSerial: '', targetSerial: '', targetCount: 0, currentCount: 0 },
+      ft: { id: 'ft', name: 'FT', fullName: 'Functional Testing', subtext: 'Automated QA & Diagnostics', startSerial: '', currentSerial: '', targetSerial: '', targetCount: 0, currentCount: 0 },
+      dlc: { id: 'dlc', name: 'DLC', fullName: 'Device Life Cycle', subtext: 'Final Calibration & Burn-In', startSerial: '', currentSerial: '', targetSerial: '', targetCount: 0, currentCount: 0 }
+    }
   });
 
   const [connected, setConnected] = useState(false);
@@ -60,54 +59,84 @@ export const ProductionProvider = ({ children }) => {
 
     setSocket(socketInstance);
 
-    // Initial fetch fallback
-    fetch(getApiUrl('/api/production'))
+    // Initial fetch and continuous fallback polling (every 2s) to guarantee accurate data sync
+    const fetchProductionData = () => {
+      fetch(getApiUrl('/api/production'))
+        .then(res => res.json())
+        .then(res => {
+          if (res.success && res.data && res.data.stages) {
+            setData(res.data);
+          }
+        })
+        .catch(err => console.log('REST fallback fetch error:', err.message));
+    };
+
+    fetchProductionData();
+    const pollInterval = setInterval(fetchProductionData, 2000);
+
+    return () => {
+      clearInterval(pollInterval);
+      socketInstance.disconnect();
+    };
+  }, []);
+
+  // Quick increment action: Calls POST /api/production/:stage/increment
+  const incrementCount = useCallback((stage, delta = 1, operator = 'Station Admin') => {
+    fetch(getApiUrl(`/api/production/${stage}/increment`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delta, operator })
+    })
       .then(res => res.json())
       .then(res => {
         if (res.success && res.data) {
           setData(res.data);
         }
       })
-      .catch(err => console.log('REST fallback fetch:', err.message));
-
-    return () => {
-      socketInstance.disconnect();
-    };
-  }, []);
-
-  // Quick increment action
-  const incrementCount = useCallback((stage, delta = 1, operator = 'Station Admin') => {
-    if (socket && connected) {
-      socket.emit('increment_count', { stage, delta, operator });
-    } else {
-      fetch(getApiUrl('/api/production/update'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stage, delta, operator })
-      })
-        .then(res => res.json())
-        .then(res => {
-          if (res.success) setData(res.data);
-        });
-    }
+      .catch(err => {
+        console.error(`Error incrementing ${stage}:`, err.message);
+        if (socket && connected) {
+          socket.emit('increment_count', { stage, delta, operator });
+        }
+      });
   }, [socket, connected]);
 
-  // Set explicit serial numbers
+  // Set explicit serial numbers: Calls POST /api/production/:stage/set
   const setStageSerial = useCallback(({ stage, currentSerial, targetSerial, startSerial, operator = 'Admin Panel' }) => {
-    if (socket && connected) {
-      socket.emit('set_stage_serial', { stage, currentSerial, targetSerial, startSerial, operator });
-    } else {
-      fetch(getApiUrl('/api/production/update'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stage, currentSerial, targetSerial, startSerial, operator })
+    fetch(getApiUrl(`/api/production/${stage}/set`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentSerial, targetSerial, startSerial, operator })
+    })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data) {
+          setData(res.data);
+        }
       })
-        .then(res => res.json())
-        .then(res => {
-          if (res.success) setData(res.data);
-        });
-    }
+      .catch(err => {
+        console.error(`Error setting ${stage} serials:`, err.message);
+        if (socket && connected) {
+          socket.emit('set_stage_serial', { stage, currentSerial, targetSerial, startSerial, operator });
+        }
+      });
   }, [socket, connected]);
+
+  // Dedicated Assembly Target Setter: Calls POST /api/production/assembly/target
+  const setAssemblyTarget = useCallback((targetSerial) => {
+    return fetch(getApiUrl('/api/production/assembly/target'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetSerial })
+    })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data) {
+          setData(res.data);
+        }
+        return res;
+      });
+  }, []);
 
   // Batch update
   const batchUpdate = useCallback((stages, shift, operator = 'Admin Batch') => {
@@ -160,6 +189,7 @@ export const ProductionProvider = ({ children }) => {
         lastPulseStage,
         incrementCount,
         setStageSerial,
+        setAssemblyTarget,
         batchUpdate,
         resetProduction,
         setShift

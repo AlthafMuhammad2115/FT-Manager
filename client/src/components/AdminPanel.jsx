@@ -35,16 +35,16 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
   // Form states for manual serial entries
   const [serialInputs, setSerialInputs] = useState({
     assembly: {
-      currentSerial: stages.assembly?.currentSerial || 'PST20129',
-      targetSerial: stages.assembly?.targetSerial || 'PST20200',
+      currentSerial: stages.assembly?.currentSerial || '',
+      targetSerial: stages.assembly?.targetSerial || '',
     },
     ft: {
-      currentSerial: stages.ft?.currentSerial || 'PST20098',
-      targetSerial: stages.ft?.targetSerial || 'PST20200',
+      currentSerial: stages.ft?.currentSerial || '',
+      targetSerial: stages.ft?.targetSerial || '',
     },
     dlc: {
-      currentSerial: stages.dlc?.currentSerial || 'PST20082',
-      targetSerial: stages.dlc?.targetSerial || 'PST20200',
+      currentSerial: stages.dlc?.currentSerial || '',
+      targetSerial: stages.dlc?.targetSerial || '',
     },
   });
 
@@ -254,14 +254,26 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
           </div>
 
           <div className="admin-form-group">
-            <label className="admin-input-label">Target Proteus</label>
+            <label className="admin-input-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Target Proteus</span>
+              {stageKey === 'ft' && (
+                <span style={{ fontSize: '0.75rem', color: '#ea580c', fontWeight: '600' }}>⚡ Auto-Linked: Assembly Current</span>
+              )}
+              {stageKey === 'dlc' && (
+                <span style={{ fontSize: '0.75rem', color: '#ea580c', fontWeight: '600' }}>⚡ Auto-Linked: FT Current</span>
+              )}
+              {stageKey === 'assembly' && (
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '400' }}>Planned Target</span>
+              )}
+            </label>
             <input
               type="text"
               className="admin-input"
-              value={localVals.targetSerial}
+              value={stageKey === 'ft' ? (stages.assembly?.currentSerial || localVals.targetSerial || '') : stageKey === 'dlc' ? (stages.ft?.currentSerial || localVals.targetSerial || '') : localVals.targetSerial}
               onChange={(e) => handleSerialChange(stageKey, 'targetSerial', e.target.value)}
-              placeholder="e.g. PST20500"
-              disabled={!canEdit}
+              placeholder={stageKey === 'ft' ? 'Auto-tracks Assembly Current' : stageKey === 'dlc' ? 'Auto-tracks FT Current' : 'e.g. PST20500'}
+              disabled={!canEdit || stageKey === 'ft' || stageKey === 'dlc'}
+              style={(stageKey === 'ft' || stageKey === 'dlc') ? { opacity: 0.85, borderColor: '#ea580c' } : {}}
             />
           </div>
 
@@ -372,35 +384,6 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
           {renderStageCard('assembly', 'Assembly Line', Layers, 'assembly')}
           {renderStageCard('ft', 'FT (Functional Test)', Activity, 'ft')}
           {renderStageCard('dlc', 'DLC (Burn-in & Life Cycle)', ShieldCheck, 'dlc')}
-        </div>
-
-        {/* Recent Activity Log */}
-        <div className="admin-log-panel">
-          <div className="admin-log-panel-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <Clock size={18} color="#ea580c" />
-              <h3>Logs & Station Activity</h3>
-            </div>
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Real-Time Synchronization Active</span>
-          </div>
-
-          <div className="admin-log-list">
-            {data.logs && data.logs.length > 0 ? (
-              data.logs.map((log) => (
-                <div key={log.id} className={`admin-log-item ${log.stage || ''}`}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <span className="admin-log-badge">{log.operator || 'ADMIN'}</span>
-                    <span>{log.message || `${log.stageName || log.stage} ➔ Serial ${log.currentSerial || ''} (Target: ${log.targetSerial || ''})`}</span>
-                  </div>
-                  <div className="admin-log-timestamp">
-                    {new Date(log.timestamp).toLocaleTimeString()}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div style={{ color: '#64748b', fontSize: '0.9rem', padding: '1rem' }}>No activity logged yet today.</div>
-            )}
-          </div>
         </div>
       </div>
 
