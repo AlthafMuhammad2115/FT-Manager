@@ -59,23 +59,17 @@ export const ProductionProvider = ({ children }) => {
 
     setSocket(socketInstance);
 
-    // Initial fetch and continuous fallback polling (every 2s) to guarantee accurate data sync
-    const fetchProductionData = () => {
-      fetch(getApiUrl('/api/production'))
-        .then(res => res.json())
-        .then(res => {
-          if (res.success && res.data && res.data.stages) {
-            setData(res.data);
-          }
-        })
-        .catch(err => console.log('REST fallback fetch error:', err.message));
-    };
-
-    fetchProductionData();
-    const pollInterval = setInterval(fetchProductionData, 2000);
+    // One-time initial fetch on mount (subsequent updates arrive via WebSocket)
+    fetch(getApiUrl('/api/production'))
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data && res.data.stages) {
+          setData(res.data);
+        }
+      })
+      .catch(err => console.log('Initial fetch error:', err.message));
 
     return () => {
-      clearInterval(pollInterval);
       socketInstance.disconnect();
     };
   }, []);
