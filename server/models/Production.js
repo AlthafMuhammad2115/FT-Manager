@@ -8,7 +8,8 @@ const unitSchema = new mongoose.Schema(
     ft: { type: String, enum: ['pending', 'done'], default: 'pending' },
     dlc: { type: String, enum: ['pending', 'done'], default: 'pending' },
     oqc: { type: String, enum: ['pending', 'done'], default: 'pending' },
-    shipment: { type: String, enum: ['pending', 'done'], default: 'pending' }
+    shipment: { type: String, enum: ['pending', 'done'], default: 'pending' },
+    isOverdue: { type: Boolean, default: false }
   },
   { _id: false }
 );

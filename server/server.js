@@ -39,7 +39,8 @@ function generateUnits(prefix, startNum, dailyTarget) {
       ft: 'pending',
       dlc: 'pending',
       oqc: 'pending',
-      shipment: 'pending'
+      shipment: 'pending',
+      isOverdue: false
     });
   }
   return units;
@@ -50,6 +51,7 @@ function computeStageSummaries(units, prefix, startNum, dailyTarget) {
   const endNum = startNum + dailyTarget - 1;
   const startSerial = formatSerial(prefix, startNum);
   const endSerial = formatSerial(prefix, endNum);
+  const totalUnits = units.length; // includes overdue carry-overs
 
   let assemblyDone = 0;
   let ftDone = 0;
@@ -71,7 +73,7 @@ function computeStageSummaries(units, prefix, startNum, dailyTarget) {
       name: 'Assembly',
       subtext: 'Mechanical & Sub-Assembly Build',
       doneCount: assemblyDone,
-      totalCount: dailyTarget,
+      totalCount: totalUnits,
       startSerial,
       endSerial
     },
@@ -81,7 +83,7 @@ function computeStageSummaries(units, prefix, startNum, dailyTarget) {
       fullName: 'Functional Testing',
       subtext: 'Automated QA & Diagnostics',
       doneCount: ftDone,
-      totalCount: dailyTarget,
+      totalCount: totalUnits,
       startSerial,
       endSerial
     },
@@ -91,7 +93,7 @@ function computeStageSummaries(units, prefix, startNum, dailyTarget) {
       fullName: 'Device Life Cycle',
       subtext: 'Final Calibration & Burn-In',
       doneCount: dlcDone,
-      totalCount: dailyTarget,
+      totalCount: totalUnits,
       startSerial,
       endSerial
     },
@@ -101,7 +103,7 @@ function computeStageSummaries(units, prefix, startNum, dailyTarget) {
       fullName: 'Outgoing Quality Control',
       subtext: 'Inspection & Compliance',
       doneCount: oqcDone,
-      totalCount: dailyTarget,
+      totalCount: totalUnits,
       startSerial,
       endSerial
     },
@@ -111,7 +113,7 @@ function computeStageSummaries(units, prefix, startNum, dailyTarget) {
       fullName: 'Shipment & Dispatch',
       subtext: 'Packaging & Logistics Dispatch',
       doneCount: shipmentDone,
-      totalCount: dailyTarget,
+      totalCount: totalUnits,
       startSerial,
       endSerial
     }
@@ -265,7 +267,8 @@ async function initMongoDB() {
         ft: u.ft || 'pending',
         dlc: u.dlc || 'pending',
         oqc: u.oqc || 'pending',
-        shipment: u.shipment || 'pending'
+        shipment: u.shipment || 'pending',
+        isOverdue: u.isOverdue || false
       }));
 
       productionState = {
@@ -564,10 +567,34 @@ app.post('/api/production/configure', (req, res) => {
     });
   }
 
+  // --- Overdue carry-over logic ---
+  // Find units from the current batch that are NOT fully shipped
+  const overdueUnits = (productionState.units || []).filter(u => {
+    return u.shipment !== 'done'; // any unit not fully through the pipeline
+  }).map(u => ({
+    serial: u.serial,
+    num: u.num,
+    assembly: u.assembly,
+    ft: u.ft,
+    dlc: u.dlc,
+    oqc: u.oqc,
+    shipment: u.shipment,
+    isOverdue: true // mark as overdue (from previous batch)
+  }));
+
+  // Generate new batch units
+  const newUnits = generateUnits(newPrefix, newStartNum, newDailyTarget);
+
+  // Merge: overdue units first, then new units
+  const mergedUnits = [...overdueUnits, ...newUnits];
+
+  const overdueCount = overdueUnits.length;
+  console.log(`📦 Batch configured: ${overdueCount} overdue units carried over + ${newDailyTarget} new units = ${mergedUnits.length} total`);
+
   productionState.prefix = newPrefix;
   productionState.startNum = newStartNum;
   productionState.dailyTarget = newDailyTarget;
-  productionState.units = generateUnits(newPrefix, newStartNum, newDailyTarget);
+  productionState.units = mergedUnits;
 
   saveData();
 
@@ -576,7 +603,7 @@ app.post('/api/production/configure', (req, res) => {
 
   res.json({
     success: true,
-    message: `Batch configured: ${formatSerial(newPrefix, newStartNum)} → ${formatSerial(newPrefix, newStartNum + newDailyTarget - 1)} (${newDailyTarget} units)`,
+    message: `Batch configured: ${formatSerial(newPrefix, newStartNum)} → ${formatSerial(newPrefix, newStartNum + newDailyTarget - 1)} (${newDailyTarget} new + ${overdueCount} overdue = ${mergedUnits.length} total)`,
     data: fullState
   });
 });

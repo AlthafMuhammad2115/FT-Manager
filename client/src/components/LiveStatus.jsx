@@ -69,13 +69,15 @@ export const LiveStatus = ({ onBackToDashboard }) => {
             return (
               <div
                 key={`${unit.serial}-${stageKey}`}
-                className={`unit-box unit-box-${boxState}`}
+                className={`unit-box unit-box-${boxState}${unit.isOverdue && boxState !== 'done' ? ' unit-box-overdue' : ''}`}
                 title={
-                  boxState === 'done'
-                    ? `${unit.serial} ✓ Done`
-                    : boxState === 'ready'
-                      ? `${unit.serial} — Pending`
-                      : `${unit.serial} — Locked (previous stage not done)`
+                  unit.isOverdue && boxState !== 'done'
+                    ? `${unit.serial} — OVERDUE (pending from previous batch)`
+                    : boxState === 'done'
+                      ? `${unit.serial} ✓ Done`
+                      : boxState === 'ready'
+                        ? `${unit.serial} — Pending`
+                        : `${unit.serial} — Locked (previous stage not done)`
                 }
                 style={{ cursor: 'default' }}
               >

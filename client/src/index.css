@@ -3114,6 +3114,33 @@ html, body, #root {
   transform: none;
 }
 
+/* Overdue units — pending from a previous batch (red highlight) */
+.unit-box-overdue {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  color: #fca5a5 !important;
+  opacity: 1 !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.25), inset 0 0 6px rgba(239, 68, 68, 0.1);
+  animation: pulse-overdue 2.5s infinite;
+}
+
+.unit-box-overdue .unit-box-serial {
+  color: #fca5a5;
+  font-weight: 700;
+}
+
+.unit-box-overdue:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.3) !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes pulse-overdue {
+  0% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.25), inset 0 0 6px rgba(239, 68, 68, 0.1); }
+  50% { box-shadow: 0 0 14px rgba(239, 68, 68, 0.4), inset 0 0 8px rgba(239, 68, 68, 0.15); }
+  100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.25), inset 0 0 6px rgba(239, 68, 68, 0.1); }
+}
+
 /* Admin Input Hint */
 .admin-input-hint {
   display: block;

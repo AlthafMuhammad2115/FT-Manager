@@ -5,16 +5,16 @@ const port = typeof window !== 'undefined' ? window.location.port : '';
 // 1. Custom env var VITE_API_URL if configured
 // 2. If dev server on port 3000 or 5173, backend is on port 5000 on the same host (supports localhost and LAN IP)
 // 3. Otherwise, use current origin or fallback
-export const API_BASE_URL = (
-  import.meta.env.VITE_API_URL ||
-  (typeof window !== 'undefined'
-    ? (port === '3000' || port === '5173'
-        ? `http://${hostname}:5000`
-        : window.location.origin)
-    : 'http://localhost:5000')
-).replace(/\/$/, '');
+// export const API_BASE_URL = (
+//   import.meta.env.VITE_API_URL ||
+//   (typeof window !== 'undefined'
+//     ? (port === '3000' || port === '5173'
+//         ? `http://${hostname}:5000`
+//         : window.location.origin)
+//     : 'http://localhost:5000')
+// ).replace(/\/$/, '');
 
-// export const API_BASE_URL = 'http://localhost:5000';
+export const API_BASE_URL = 'http://localhost:5000';
 // Socket.io URL resolution
 export const SOCKET_URL = (
   import.meta.env.VITE_SOCKET_URL ||

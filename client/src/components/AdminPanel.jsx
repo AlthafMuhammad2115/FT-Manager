@@ -148,15 +148,17 @@ export const AdminPanel = ({ adminUser, onBackToDashboard, onLogout }) => {
             return (
               <button
                 key={`${unit.serial}-${stageKey}`}
-                className={`unit-box unit-box-${boxState}`}
+                className={`unit-box unit-box-${boxState}${unit.isOverdue && boxState !== 'done' ? ' unit-box-overdue' : ''}`}
                 onClick={() => isClickable && handleUnitClick(unit.serial, stageKey, unit[stageKey])}
                 disabled={!isClickable}
                 title={
-                  boxState === 'done' 
-                    ? `${unit.serial} ✓ Done — Click to undo` 
-                    : boxState === 'ready' 
-                      ? `${unit.serial} — Click to mark done` 
-                      : `${unit.serial} — Locked (previous stage not done)`
+                  unit.isOverdue && boxState !== 'done'
+                    ? `${unit.serial} — OVERDUE (pending from previous batch)`
+                    : boxState === 'done' 
+                      ? `${unit.serial} ✓ Done — Click to undo` 
+                      : boxState === 'ready' 
+                        ? `${unit.serial} — Click to mark done` 
+                        : `${unit.serial} — Locked (previous stage not done)`
                 }
               >
                 <span className="unit-box-serial">{unit.serial.replace(data.prefix || 'PST', '')}</span>
