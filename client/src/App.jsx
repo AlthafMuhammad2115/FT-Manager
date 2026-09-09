@@ -3,9 +3,10 @@ import { ProductionProvider } from './context/ProductionContext';
 import { Dashboard } from './components/Dashboard';
 import { AdminPanel } from './components/AdminPanel';
 import { AdminLogin } from './components/AdminLogin';
+import { LiveStatus } from './components/LiveStatus';
 
 export function App() {
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'admin'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'admin' | 'live'
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminUser, setAdminUser] = useState(null);
 
@@ -25,13 +26,15 @@ export function App() {
     }
   }, []);
 
-  // Handle URL routing / deep linking (e.g. /admin or #admin)
+  // Handle URL routing / deep linking (e.g. /admin or #admin, /live or #live)
   useEffect(() => {
     const handleLocationChange = () => {
       const path = window.location.pathname;
       const hash = window.location.hash;
       if (path === '/admin' || hash === '#admin') {
         setCurrentView('admin');
+      } else if (path === '/live' || hash === '#live') {
+        setCurrentView('live');
       } else {
         setCurrentView('dashboard');
       }
@@ -55,6 +58,11 @@ export function App() {
   const navigateToDashboard = () => {
     window.location.hash = '';
     setCurrentView('dashboard');
+  };
+
+  const navigateToLive = () => {
+    window.location.hash = 'live';
+    setCurrentView('live');
   };
 
   const handleLoginSuccess = (user) => {
@@ -86,8 +94,10 @@ export function App() {
             onCancel={navigateToDashboard}
           />
         )
+      ) : currentView === 'live' ? (
+        <LiveStatus onBackToDashboard={navigateToDashboard} />
       ) : (
-        <Dashboard onOpenAdmin={navigateToAdmin} />
+        <Dashboard onOpenAdmin={navigateToAdmin} onOpenLive={navigateToLive} />
       )}
     </ProductionProvider>
   );

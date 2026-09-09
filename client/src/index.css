@@ -276,11 +276,15 @@ html, body, #root {
   font-size: 0.9rem;
   font-weight: 600;
   color: #e2e8f0;
+  white-space: nowrap;
 }
 
 .live-dot {
   width: 10px;
   height: 10px;
+  min-width: 10px;
+  min-height: 10px;
+  flex-shrink: 0;
   border-radius: 50%;
   background-color: #10b981;
   box-shadow: 0 0 10px #10b981;
@@ -1041,6 +1045,26 @@ html, body, #root {
 .tv-btn-primary:hover {
   background: var(--color-orange-bright);
   transform: translateY(-1px);
+}
+
+.tv-btn-live {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  font-weight: 700;
+}
+
+.tv-btn-live:hover {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: #10b981;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* Live Status page: shipment banner adjustments */
+.live-status-layout .live-status-shipment-banner {
+  margin: 0 1.5rem;
+  border-radius: 12px;
 }
 
 .tv-btn-logout {

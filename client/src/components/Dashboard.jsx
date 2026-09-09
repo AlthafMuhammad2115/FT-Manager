@@ -4,7 +4,7 @@ import { StageCard } from './StageCard';
 import { useProduction } from '../context/ProductionContext';
 import { Zap, Minimize, Truck, CheckCircle2, TrendingUp, PackageCheck } from 'lucide-react';
 
-export const Dashboard = ({ onOpenAdmin }) => {
+export const Dashboard = ({ onOpenAdmin, onOpenLive }) => {
   const { data } = useProduction();
   const stages = data.stages || {};
   const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement || document.webkitFullscreenElement));
@@ -109,6 +109,7 @@ export const Dashboard = ({ onOpenAdmin }) => {
       {!isFullscreen && (
         <Header 
           onOpenAdmin={onOpenAdmin} 
+          onOpenLive={onOpenLive}
           viewMode={viewMode} 
           onToggleViewMode={() => setViewMode(v => v === 'auto' ? 'inverse' : 'auto')}
           isFullscreen={isFullscreen}

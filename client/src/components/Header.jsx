@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Cpu, Maximize, Minimize, Settings, Monitor, Smartphone, Target } from 'lucide-react';
+import { Cpu, Maximize, Minimize, Settings, Monitor, Smartphone, Target, Eye } from 'lucide-react';
 import { useProduction } from '../context/ProductionContext';
 
-export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode, isFullscreen = false, onToggleFullscreen }) => {
+export const Header = ({ onOpenAdmin, onOpenLive, viewMode = 'auto', onToggleViewMode, isFullscreen = false, onToggleFullscreen }) => {
   const { data, connected } = useProduction();
   const [time, setTime] = useState(new Date());
 
@@ -61,10 +61,20 @@ export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode, isFul
           <span>{connected ? 'LIVE SYNC' : 'OFFLINE'}</span>
         </div>
 
-        <div className="tv-badge tv-target-badge" title="Daily Batch Target">
+        {/* <div className="tv-badge tv-target-badge" title="Daily Batch Target">
           <Target size={15} color="#ea580c" />
           <span>Daily Target: <strong>{data.dailyTarget || 50} Units</strong></span>
-        </div>
+        </div> */}
+
+        <button 
+          className="tv-btn tv-btn-live" 
+          onClick={onOpenLive}
+          title="Open Read-Only Live Status View"
+          id="btn-live-status"
+        >
+          <Eye size={16} />
+          <span>Live Status</span>
+        </button>
 
         <button 
           className="tv-btn tv-btn-primary" 
@@ -109,3 +119,4 @@ export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode, isFul
     </header>
   );
 };
+
