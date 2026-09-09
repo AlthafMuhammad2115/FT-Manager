@@ -1,18 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Activity, Clock, Cpu, Maximize, Minimize, Settings, Radio, Monitor, Smartphone, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Cpu, Maximize, Minimize, Settings, Monitor, Smartphone, Target } from 'lucide-react';
 import { useProduction } from '../context/ProductionContext';
-
-// Auto shift detection based on current time (matches server logic)
-function getAutoShift() {
-  const hours = new Date().getHours();
-  if (hours >= 6 && hours < 14) {
-    return 'Morning Shift (06:00 - 14:00)';
-  } else if (hours >= 14 && hours < 22) {
-    return 'Evening Shift (14:00 - 22:00)';
-  } else {
-    return 'Off-Shift (22:00 - 06:00)';
-  }
-}
 
 export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode, isFullscreen = false, onToggleFullscreen }) => {
   const { data, connected } = useProduction();
@@ -55,9 +43,6 @@ export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode, isFul
     year: 'numeric'
   });
 
-  // Always auto-detect shift from current time — not editable
-  const currentShift = useMemo(() => getAutoShift(), [time]);
-
   return (
     <header className="tv-header">
       <div className="tv-brand">
@@ -76,10 +61,9 @@ export const Header = ({ onOpenAdmin, viewMode = 'auto', onToggleViewMode, isFul
           <span>{connected ? 'LIVE SYNC' : 'OFFLINE'}</span>
         </div>
 
-        <div className="tv-badge tv-shift-badge">
-          <Radio size={15} color="#ea580c" />
-          <span>{currentShift}</span>
-          <span className="admin-shift-auto-tag" style={{ marginLeft: '0.25rem' }}>AUTO</span>
+        <div className="tv-badge tv-target-badge" title="Daily Batch Target">
+          <Target size={15} color="#ea580c" />
+          <span>Daily Target: <strong>{data.dailyTarget || 50} Units</strong></span>
         </div>
 
         <button 

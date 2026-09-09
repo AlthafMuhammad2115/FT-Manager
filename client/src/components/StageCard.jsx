@@ -1,20 +1,17 @@
 import React, { useMemo } from 'react';
-import { Layers, Activity, ShieldCheck, CheckCircle2, TrendingUp, AlertCircle, QrCode, Target, ChevronUp, ChevronsUp, Sparkles } from 'lucide-react';
+import { Layers, Activity, ShieldCheck, ClipboardCheck, Truck, CheckCircle2, TrendingUp, AlertCircle, Target, ChevronsUp, Sparkles } from 'lucide-react';
 
-export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
-  const currentSerial = stageData?.currentSerial || '---';
-  const targetSerial = stageData?.targetSerial || '---';
+export const StageCard = ({ stageKey, stageData, stepIndex }) => {
+  const doneCount = stageData?.doneCount ?? 0;
+  const totalCount = stageData?.totalCount ?? 50;
   const startSerial = stageData?.startSerial || '---';
-  const currentCount = stageData?.currentCount ?? stageData?.current ?? 0;
-  const targetCount = stageData?.targetCount ?? stageData?.target ?? 0;
+  const endSerial = stageData?.endSerial || '---';
 
-  const percentage = targetCount > 0 ? Math.min(100, Math.round((currentCount / targetCount) * 100)) : 0;
-  const remaining = Math.max(0, targetCount - currentCount);
-  const isCompleted = currentCount >= targetCount && targetCount > 0;
+  const percentage = totalCount > 0 ? Math.min(100, Math.round((doneCount / totalCount) * 100)) : 0;
+  const remaining = Math.max(0, totalCount - doneCount);
+  const isCompleted = doneCount >= totalCount && totalCount > 0;
 
-  // Dynamic gap between Target (top) and Current (bottom):
-  // At 0% completed -> 38px gap with animated upward arrows
-  // At 100% completed -> smoothly reduces to 10px (NO overlapping)
+  // Dynamic gap between Target (top) and Current (bottom)
   const gapHeight = useMemo(() => {
     return Math.round(38 - (percentage / 100) * 26);
   }, [percentage]);
@@ -28,13 +25,17 @@ export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
         return <Activity size={28} />;
       case 'dlc':
         return <ShieldCheck size={28} />;
+      case 'oqc':
+        return <ClipboardCheck size={28} />;
+      case 'shipment':
+        return <Truck size={28} />;
       default:
         return <Layers size={28} />;
     }
   };
 
   return (
-    <div className={`tv-card ${stageKey} ${isPulsing ? 'pulse-updated' : ''}`}>
+    <div className={`tv-card ${stageKey} ${isCompleted ? 'pulse-completed' : ''}`}>
       {/* Card Top Header */}
       <div className="tv-card-header">
         <div className="tv-card-badge-wrap">
@@ -43,7 +44,7 @@ export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
           </div>
           <div className="tv-stage-title-wrap">
             <h2>{stageData?.name || stageKey.toUpperCase()}</h2>
-            <span>{stageData?.subtext || (stageKey === 'ft' ? 'Functional Testing' : 'Production Line')}</span>
+            <span>{stageData?.subtext || 'Production Line'}</span>
           </div>
         </div>
         <div className="tv-stage-step-num">STAGE 0{stepIndex}</div>
@@ -52,28 +53,30 @@ export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
       {/* Main Metric Body */}
       <div className="tv-card-body">
 
-        {/* 1. TARGET PROTEUS BOX (AT TOP) */}
+        {/* 1. TARGET / RANGE BOX */}
         <div className="tv-count-box tv-target-count-box">
           <div className="tv-metric-header">
             <Target size={16} color="#ef4444" />
             <div className="tv-metric-label">
-              <span className="text-red-highlight">TARGET</span> PROTEUS
+              <span className="text-red-highlight">DAILY</span> BATCH RANGE
             </div>
           </div>
           
-          {/* Big Target Serial Number */}
-          <div className="tv-huge-number tv-serial-text tv-target-serial" title={targetSerial}>
-            {targetSerial}
+          {/* Serial Range Display */}
+          <div className="tv-serial-range">
+            <span className="tv-serial-start">{startSerial}</span>
+            <span className="tv-serial-arrow">→</span>
+            <span className="tv-serial-end">{endSerial}</span>
           </div>
 
           <div className="tv-metric-subpill">
-            <span>Target: <strong>{targetCount} Units</strong></span>
+            <span>Target: <strong>{totalCount} Units</strong></span>
             <span className="tv-subpill-divider">•</span>
             <span>Remaining: <strong className={remaining > 0 ? 'text-remaining-warn' : 'text-remaining-good'}>{remaining}</strong></span>
           </div>
         </div>
 
-        {/* 2. DYNAMIC ARROW GAP CONNECTOR (SEPARATION DISTANCE THAT REDUCES TOWARDS TARGET) */}
+        {/* 2. DYNAMIC ARROW GAP CONNECTOR */}
         <div 
           className={`tv-stage-gap-connector ${isCompleted ? 'completed' : ''}`}
           style={{ height: `${gapHeight}px` }}
@@ -94,29 +97,29 @@ export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
           <div className="tv-connector-line right" />
         </div>
 
-        {/* 3. CURRENT PROTEUS BOX (BELOW TARGET) */}
+        {/* 3. COMPLETED COUNT BOX */}
         <div className={`tv-count-box tv-current-count-box ${isCompleted ? 'target-reached' : ''}`}>
           <div className="tv-metric-header">
-            <QrCode size={16} color="#ef4444" />
+            <CheckCircle2 size={16} color="#10b981" />
             <div className="tv-metric-label">
-              <span className="text-red-highlight">CURRENT</span> PROTEUS
+              <span className="text-red-highlight">COMPLETED</span> COUNT
             </div>
           </div>
           
-          {/* Huge Glowing Serial Number */}
-          <div className="tv-huge-number tv-serial-text" title={currentSerial}>
-            {currentSerial}
+          {/* Big Count Display */}
+          <div className="tv-huge-number tv-done-count">
+            {doneCount} <span className="tv-done-count-total">/ {totalCount}</span>
           </div>
 
           <div className="tv-metric-subpill">
-            <span>Completed: <strong>{currentCount} Units</strong></span>
+            <span>Done: <strong>{doneCount} Units</strong></span>
           </div>
         </div>
 
         {/* Completion Progress Bar */}
         <div className="tv-progress-section">
           <div className="tv-progress-info">
-            <span>PROTEUS COMPLETION PROGRESS</span>
+            <span>STAGE COMPLETION PROGRESS</span>
             <span className="tv-progress-pct">{percentage}%</span>
           </div>
           <div className="tv-progress-track">
@@ -149,9 +152,9 @@ export const StageCard = ({ stageKey, stageData, isPulsing, stepIndex }) => {
           )}
         </div>
 
-        <div className="tv-remaining-text">
-          Target Proteus: <strong>{targetSerial}</strong>
-        </div>
+        {/* <div className="tv-remaining-text">
+          Batch: <strong>{startSerial} → {endSerial}</strong>
+        </div> */}
       </div>
     </div>
   );

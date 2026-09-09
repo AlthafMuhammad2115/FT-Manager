@@ -47,7 +47,7 @@ export const AdminLogin = ({ onLoginSuccess, onCancel, isGateway = false }) => {
         admin_anora: {
           password: 'Anora@12#',
           role: 'Super Administrator',
-          allowedStages: ['assembly', 'ft', 'dlc'],
+          allowedStages: ['assembly', 'ft', 'dlc', 'oqc', 'shipment'],
           canBatchConfig: true
         },
         admin_assembly: {
@@ -68,10 +68,22 @@ export const AdminLogin = ({ onLoginSuccess, onCancel, isGateway = false }) => {
           allowedStages: ['dlc'],
           canBatchConfig: false
         },
+        admin_oqc: {
+          password: 'admin_pass',
+          role: 'OQC Station Supervisor',
+          allowedStages: ['oqc'],
+          canBatchConfig: false
+        },
+        admin_shipment: {
+          password: 'admin_pass',
+          role: 'Shipment & Dispatch Supervisor',
+          allowedStages: ['shipment'],
+          canBatchConfig: false
+        },
         admin_user: {
           password: 'admin_pass',
           role: 'Administrator',
-          allowedStages: ['assembly', 'ft', 'dlc'],
+          allowedStages: ['assembly', 'ft', 'dlc', 'oqc', 'shipment'],
           canBatchConfig: true
         }
       };

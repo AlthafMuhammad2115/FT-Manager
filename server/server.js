@@ -20,63 +20,126 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
 
-// Serial Number Helper Utilities
-function parseSerial(serialStr) {
-  if (!serialStr || typeof serialStr !== 'string') {
-    return { prefix: 'PST', num: 20000, pad: 5, raw: '' };
-  }
-  const match = serialStr.trim().match(/^([A-Za-z_-]*)(\d+)$/);
-  if (match) {
-    const prefix = match[1] || 'PST';
-    const numStr = match[2];
-    return {
-      prefix,
-      num: parseInt(numStr, 10),
-      pad: Math.max(numStr.length, 5),
-      raw: serialStr.trim()
-    };
-  }
-  return { prefix: 'PST', num: 20000, pad: 5, raw: serialStr.trim() };
-}
+// ==========================================
+// HELPER UTILITIES
+// ==========================================
 
+// Format serial: prefix + zero-padded number
 function formatSerial(prefix, num, pad = 5) {
-  const numStr = String(Math.max(0, num)).padStart(pad, '0');
-  return `${prefix}${numStr}`;
+  return `${prefix}${String(num).padStart(pad, '0')}`;
 }
 
-// Automatically deduce starting serial from current/target serial if startSerial is not given
-function getEffectiveStartSerial(startSerial, currentSerial, targetSerial) {
-  if (startSerial && typeof startSerial === 'string' && startSerial.trim().length > 0) {
-    return startSerial.trim().toUpperCase();
+// Generate units array from startNum and dailyTarget
+function generateUnits(prefix, startNum, dailyTarget) {
+  const units = [];
+  for (let i = 0; i < dailyTarget; i++) {
+    const num = startNum + i;
+    units.push({
+      serial: formatSerial(prefix, num),
+      num,
+      assembly: 'pending',
+      ft: 'pending',
+      dlc: 'pending',
+      oqc: 'pending',
+      shipment: 'pending'
+    });
   }
-  const ref = currentSerial || targetSerial || 'PST20001';
-  const parsed = parseSerial(ref);
-  if (parsed.num >= 20000) {
-    return formatSerial(parsed.prefix, 20001, parsed.pad);
-  } else if (parsed.num > 0) {
-    return formatSerial(parsed.prefix, 1, parsed.pad);
-  }
-  return 'PST20001';
+  return units;
 }
 
-function calculateCount(startSerial, currentSerial) {
-  if (!currentSerial) return 0;
-  const start = parseSerial(startSerial || 'PST20001');
-  const curr = parseSerial(currentSerial);
-  if (curr.num >= start.num && start.num > 0) {
-    return (curr.num - start.num) + 1;
+// Compute stage summaries from units array
+function computeStageSummaries(units, prefix, startNum, dailyTarget) {
+  const endNum = startNum + dailyTarget - 1;
+  const startSerial = formatSerial(prefix, startNum);
+  const endSerial = formatSerial(prefix, endNum);
+
+  let assemblyDone = 0;
+  let ftDone = 0;
+  let dlcDone = 0;
+  let oqcDone = 0;
+  let shipmentDone = 0;
+
+  for (const unit of units) {
+    if (unit.assembly === 'done') assemblyDone++;
+    if (unit.ft === 'done') ftDone++;
+    if (unit.dlc === 'done') dlcDone++;
+    if (unit.oqc === 'done') oqcDone++;
+    if (unit.shipment === 'done') shipmentDone++;
   }
-  return 0;
+
+  return {
+    assembly: {
+      id: 'assembly',
+      name: 'Assembly',
+      subtext: 'Mechanical & Sub-Assembly Build',
+      doneCount: assemblyDone,
+      totalCount: dailyTarget,
+      startSerial,
+      endSerial
+    },
+    ft: {
+      id: 'ft',
+      name: 'FT',
+      fullName: 'Functional Testing',
+      subtext: 'Automated QA & Diagnostics',
+      doneCount: ftDone,
+      totalCount: dailyTarget,
+      startSerial,
+      endSerial
+    },
+    dlc: {
+      id: 'dlc',
+      name: 'DLC',
+      fullName: 'Device Life Cycle',
+      subtext: 'Final Calibration & Burn-In',
+      doneCount: dlcDone,
+      totalCount: dailyTarget,
+      startSerial,
+      endSerial
+    },
+    oqc: {
+      id: 'oqc',
+      name: 'OQC',
+      fullName: 'Outgoing Quality Control',
+      subtext: 'Inspection & Compliance',
+      doneCount: oqcDone,
+      totalCount: dailyTarget,
+      startSerial,
+      endSerial
+    },
+    shipment: {
+      id: 'shipment',
+      name: 'Shipment',
+      fullName: 'Shipment & Dispatch',
+      subtext: 'Packaging & Logistics Dispatch',
+      doneCount: shipmentDone,
+      totalCount: dailyTarget,
+      startSerial,
+      endSerial
+    }
+  };
 }
 
-function calculateTargetUnits(startSerial, targetSerial) {
-  if (!targetSerial) return 0;
-  const start = parseSerial(startSerial || 'PST20001');
-  const tgt = parseSerial(targetSerial);
-  if (tgt.num >= start.num && start.num > 0) {
-    return (tgt.num - start.num) + 1;
-  }
-  return 0;
+// Build full state object for API/WebSocket responses
+function buildFullState(state) {
+  const stages = computeStageSummaries(
+    state.units,
+    state.prefix,
+    state.startNum,
+    state.dailyTarget
+  );
+
+  return {
+    productName: state.productName,
+    prefix: state.prefix,
+    startNum: state.startNum,
+    dailyTarget: state.dailyTarget,
+    shift: state.shift,
+    shiftMode: state.shiftMode,
+    lastUpdated: state.lastUpdated,
+    units: state.units,
+    stages
+  };
 }
 
 // Shift Determination Helper (2 Active Shifts: 6am-2pm, 2pm-10pm in IST / Asia/Kolkata)
@@ -108,138 +171,67 @@ function getAutoShift() {
   }
 }
 
-// Initial state template — starts blank so data is set directly from frontend
-const defaultData = {
+// Validate cascading: can a unit be modified at this stage?
+// Pipeline: assembly -> ft -> dlc -> oqc -> shipment
+function canEditUnitAtStage(unit, stage) {
+  if (stage === 'assembly') return true;
+  if (stage === 'ft') return unit.assembly === 'done';
+  if (stage === 'dlc') return unit.ft === 'done';
+  if (stage === 'oqc') return unit.dlc === 'done';
+  if (stage === 'shipment') return unit.oqc === 'done';
+  return false;
+}
+
+// Get the prerequisite stage name for user-friendly error messages
+function getPrerequisiteStage(stage) {
+  switch (stage) {
+    case 'ft': return 'Assembly';
+    case 'dlc': return 'FT';
+    case 'oqc': return 'DLC';
+    case 'shipment': return 'OQC';
+    default: return '';
+  }
+}
+
+// ==========================================
+// IN-MEMORY STATE
+// ==========================================
+
+let productionState = {
   productName: 'PROTEUS',
+  prefix: 'PST',
+  startNum: 20001,
+  dailyTarget: 50,
   shift: getAutoShift(),
   shiftMode: 'auto',
   lastUpdated: new Date().toISOString(),
-  stages: {
-    assembly: {
-      id: 'assembly',
-      name: 'Assembly',
-      subtext: 'Mechanical & Sub-Assembly Build',
-      startSerial: 'PST20001',
-      currentSerial: '',
-      targetSerial: '',
-      targetCount: 0,
-      currentCount: 0,
-      current: 0,
-      target: 0
-    },
-    ft: {
-      id: 'ft',
-      name: 'FT',
-      fullName: 'Functional Testing',
-      subtext: 'Automated QA & Electrical Diagnostics',
-      startSerial: 'PST20001',
-      currentSerial: '',
-      targetSerial: '',
-      targetCount: 0,
-      currentCount: 0,
-      current: 0,
-      target: 0
-    },
-    dlc: {
-      id: 'dlc',
-      name: 'DLC',
-      fullName: 'Device Life Cycle',
-      subtext: 'Final Calibration & Burn-In',
-      startSerial: 'PST20001',
-      currentSerial: '',
-      targetSerial: '',
-      targetCount: 0,
-      currentCount: 0,
-      current: 0,
-      target: 0
-    }
-  }
+  units: generateUnits('PST', 20001, 50)
 };
 
-// Helper: Ensure counts are accurately synchronized from serials
-function normalizeStageData(stageObj) {
-  if (!stageObj) return stageObj;
+// ==========================================
+// MONGODB PERSISTENCE
+// ==========================================
 
-  stageObj.currentSerial = stageObj.currentSerial ? stageObj.currentSerial.trim().toUpperCase() : '';
-  stageObj.targetSerial = stageObj.targetSerial ? stageObj.targetSerial.trim().toUpperCase() : '';
-  stageObj.startSerial = getEffectiveStartSerial(stageObj.startSerial, stageObj.currentSerial, stageObj.targetSerial);
-
-  if (stageObj.currentSerial) {
-    stageObj.currentCount = calculateCount(stageObj.startSerial, stageObj.currentSerial);
-  } else {
-    stageObj.currentCount = typeof stageObj.current === 'number' ? stageObj.current : 0;
-  }
-
-  if (stageObj.targetSerial) {
-    stageObj.targetCount = calculateTargetUnits(stageObj.startSerial, stageObj.targetSerial);
-  } else {
-    stageObj.targetCount = typeof stageObj.target === 'number' ? stageObj.target : 0;
-  }
-
-  stageObj.current = stageObj.currentCount;
-  stageObj.target = stageObj.targetCount;
-  return stageObj;
-}
-
-// Cascade Pipeline: Assembly Current ➔ FT Target, FT Current ➔ DLC Target
-function applyStageCascade(stages) {
-  if (!stages) return stages;
-
-  // 1. Normalize Assembly Stage
-  if (stages.assembly) {
-    normalizeStageData(stages.assembly);
-  }
-
-  // 2. Cascade Assembly Current ➔ FT Target
-  if (stages.ft) {
-    if (stages.assembly) {
-      if (stages.assembly.currentSerial) {
-        stages.ft.targetSerial = stages.assembly.currentSerial;
-      }
-      if (stages.assembly.startSerial) {
-        stages.ft.startSerial = stages.assembly.startSerial;
-      }
-    }
-    normalizeStageData(stages.ft);
-  }
-
-  // 3. Cascade FT Current ➔ DLC Target
-  if (stages.dlc) {
-    if (stages.ft) {
-      if (stages.ft.currentSerial) {
-        stages.dlc.targetSerial = stages.ft.currentSerial;
-      }
-      if (stages.ft.startSerial) {
-        stages.dlc.startSerial = stages.ft.startSerial;
-      }
-    }
-    normalizeStageData(stages.dlc);
-  }
-
-  return stages;
-}
-
-// In-Memory state clone of defaultData
-let productionState = JSON.parse(JSON.stringify(defaultData));
-
-// Save data helper (persists directly to MongoDB)
-async function saveData(data) {
+async function saveData() {
   try {
-    data.lastUpdated = new Date().toISOString();
+    productionState.lastUpdated = new Date().toISOString();
     if (mongoose.connection.readyState === 1) {
       await ProductionModel.findOneAndUpdate(
         { key: 'current_production_state' },
         {
           $set: {
             key: 'current_production_state',
-            productName: data.productName,
-            shift: data.shift,
-            shiftMode: data.shiftMode,
-            lastUpdated: data.lastUpdated,
-            stages: data.stages
+            productName: productionState.productName,
+            prefix: productionState.prefix,
+            startNum: productionState.startNum,
+            dailyTarget: productionState.dailyTarget,
+            shift: productionState.shift,
+            shiftMode: productionState.shiftMode,
+            lastUpdated: productionState.lastUpdated,
+            units: productionState.units
           }
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
       );
       console.log('✅ MongoDB Synced:', new Date().toLocaleTimeString());
     } else {
@@ -250,48 +242,49 @@ async function saveData(data) {
   }
 }
 
-// MongoDB Initialization and State Synchronization
 async function initMongoDB() {
   if (!MONGODB_URI) {
-    console.warn('⚠️  MONGODB_URI is not set in .env! Please configure MONGODB_URI to persist production state.');
+    console.warn('⚠️  MONGODB_URI is not set in .env! Using in-memory state only.');
     return;
   }
 
   try {
-    console.log('🔄 Connecting to MongoDB database...');
-    await mongoose.connect(MONGODB_URI, { dbName: 'ft_manager' });
-    console.log('✅ Connected to MongoDB successfully! Database: ft_manager');
+    const dbName = 'ft_manager_2_0';
+    console.log(`🔄 Connecting to MongoDB database '${dbName}'...`);
+    await mongoose.connect(MONGODB_URI, { dbName });
+    console.log(`✅ Connected to MongoDB successfully! Database: ${dbName}`);
 
     // Fetch existing state from MongoDB
     const existingDoc = await ProductionModel.findOne({ key: 'current_production_state' }).lean();
-    if (existingDoc && existingDoc.stages && Object.keys(existingDoc.stages).length > 0) {
-      console.log('📥 Loaded production state from MongoDB.');
+    if (existingDoc && existingDoc.units && existingDoc.units.length > 0) {
+      console.log('📥 Loaded production state from MongoDB (' + existingDoc.units.length + ' units).');
+      
+      // Ensure existing units have all stages present (including oqc and shipment)
+      const sanitizedUnits = existingDoc.units.map(u => ({
+        serial: u.serial,
+        num: u.num,
+        assembly: u.assembly || 'pending',
+        ft: u.ft || 'pending',
+        dlc: u.dlc || 'pending',
+        oqc: u.oqc || 'pending',
+        shipment: u.shipment || 'pending'
+      }));
+
       productionState = {
         productName: existingDoc.productName || 'PROTEUS',
+        prefix: existingDoc.prefix || 'PST',
+        startNum: existingDoc.startNum || 20001,
+        dailyTarget: existingDoc.dailyTarget || 50,
         shift: (existingDoc.shiftMode === 'manual' && existingDoc.shift) ? existingDoc.shift : getAutoShift(),
         shiftMode: existingDoc.shiftMode || 'auto',
         lastUpdated: existingDoc.lastUpdated || new Date().toISOString(),
-        stages: existingDoc.stages
+        units: sanitizedUnits
       };
-      
-      applyStageCascade(productionState.stages);
 
-      io.emit('production_updated', productionState);
+      io.emit('production_updated', buildFullState(productionState));
     } else {
-      console.log('📤 Initializing fresh production state in MongoDB collection...');
-      applyStageCascade(productionState.stages);
-      await ProductionModel.findOneAndUpdate(
-        { key: 'current_production_state' },
-        {
-          key: 'current_production_state',
-          productName: productionState.productName,
-          shift: productionState.shift,
-          shiftMode: productionState.shiftMode,
-          lastUpdated: productionState.lastUpdated,
-          stages: productionState.stages
-        },
-        { upsert: true, new: true }
-      );
+      console.log('📤 Initializing fresh production state in MongoDB...');
+      await saveData();
       console.log('✅ Production state created in MongoDB.');
     }
   } catch (err) {
@@ -307,33 +300,17 @@ setInterval(() => {
   if (productionState.shiftMode !== 'manual') {
     const expectedShift = getAutoShift();
     if (productionState.shift !== expectedShift) {
-      const oldShift = productionState.shift;
       productionState.shift = expectedShift;
-      
-      // Target count increases by +20 only after Morning Shift (6am-2pm) or Evening Shift (2pm-10pm) completes
-      const isMorningCompleted = oldShift && oldShift.includes('Morning Shift');
-      const isEveningCompleted = oldShift && oldShift.includes('Evening Shift');
-      const shouldIncrementTarget = isMorningCompleted || isEveningCompleted;
-
-      if (shouldIncrementTarget && productionState.stages) {
-        console.log(`[Shift Completion] ${oldShift} completed ➔ Transitioning to ${expectedShift}. Increasing target by +20 units.`);
-        const st = productionState.stages.assembly;
-        if (st && st.targetSerial) {
-          const tgtP = parseSerial(st.targetSerial);
-          const newTargetNum = tgtP.num + 20;
-          st.targetSerial = formatSerial(tgtP.prefix, newTargetNum, tgtP.pad);
-        }
-        applyStageCascade(productionState.stages);
-      } else {
-        console.log(`[Shift Transition] Shift changed from "${oldShift}" to "${expectedShift}".`);
-      }
-      
-      saveData(productionState);
-      io.emit('production_updated', productionState);
+      saveData();
+      io.emit('production_updated', buildFullState(productionState));
       io.emit('shift_changed', { shift: expectedShift });
     }
   }
 }, 15000);
+
+// ==========================================
+// EXPRESS MIDDLEWARE
+// ==========================================
 
 app.use(cors());
 app.use(express.json());
@@ -344,13 +321,16 @@ if (fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
 }
 
-// Authentication Accounts & Roles Configuration
+// ==========================================
+// AUTHENTICATION
+// ==========================================
+
 const ADMIN_ACCOUNTS = {
   admin_anora: {
     username: 'admin_anora',
     passwords: ['Anora@12#'],
     role: 'Super Administrator',
-    allowedStages: ['assembly', 'ft', 'dlc'],
+    allowedStages: ['assembly', 'ft', 'dlc', 'oqc', 'shipment'],
     canBatchConfig: true
   },
   admin_assembly: {
@@ -374,12 +354,25 @@ const ADMIN_ACCOUNTS = {
     allowedStages: ['dlc'],
     canBatchConfig: false
   },
-  // Backwards compatibility
+  admin_oqc: {
+    username: 'admin_oqc',
+    passwords: ['admin_pass'],
+    role: 'OQC Station Supervisor',
+    allowedStages: ['oqc'],
+    canBatchConfig: false
+  },
+  admin_shipment: {
+    username: 'admin_shipment',
+    passwords: ['admin_pass'],
+    role: 'Shipment & Dispatch Supervisor',
+    allowedStages: ['shipment'],
+    canBatchConfig: false
+  },
   admin_user: {
     username: 'admin_user',
     passwords: ['admin_pass'],
     role: 'Administrator',
-    allowedStages: ['assembly', 'ft', 'dlc'],
+    allowedStages: ['assembly', 'ft', 'dlc', 'oqc', 'shipment'],
     canBatchConfig: true
   }
 };
@@ -436,7 +429,7 @@ app.post('/api/auth/verify', (req, res) => {
         user: {
           username: 'admin_anora',
           role: 'Super Administrator',
-          allowedStages: ['assembly', 'ft', 'dlc'],
+          allowedStages: ['assembly', 'ft', 'dlc', 'oqc', 'shipment'],
           canBatchConfig: true
         }
       });
@@ -446,277 +439,140 @@ app.post('/api/auth/verify', (req, res) => {
 });
 
 // ==========================================
-// DEDICATED PRODUCTION REST API ENDPOINTS
+// PRODUCTION API ENDPOINTS
 // ==========================================
 
-// 1. Get Live Production Status
+// 1. Get full production state (called once on dashboard mount)
 app.get('/api/production', (req, res) => {
-  res.json({ success: true, data: productionState });
+  res.json({ success: true, data: buildFullState(productionState) });
 });
 
-// 2. Increment Current Count for a Specific Stage (/api/production/assembly/increment, /api/production/ft/increment, /api/production/dlc/increment)
-app.all(['/api/production/:stage/increment', '/api/production/increment/:stage'], (req, res) => {
-  const stage = (req.params.stage || '').toLowerCase();
-  if (!['assembly', 'ft', 'dlc'].includes(stage)) {
+// 2. Toggle a single unit's status at a given stage
+// POST /api/production/unit/status
+// Body: { serial: "PST21003", stage: "assembly", status: "done" | "pending" }
+app.post('/api/production/unit/status', (req, res) => {
+  const { serial, stage, status } = req.body;
+
+  if (!serial || !stage || !status) {
     return res.status(400).json({
       success: false,
-      message: `Invalid stage: '${stage}'. Allowed stages: 'assembly', 'ft', 'dlc'`
+      message: 'Required fields: serial, stage, status'
     });
   }
 
-  const delta = parseInt(req.body?.delta ?? req.query?.delta ?? 1, 10) || 1;
-  const directSerial = req.body?.serial || req.body?.currentSerial || req.query?.serial;
-  const stageObj = productionState.stages[stage];
+  const allowedStages = ['assembly', 'ft', 'dlc', 'oqc', 'shipment'];
+  if (!allowedStages.includes(stage)) {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid stage: '${stage}'. Allowed: ${allowedStages.join(', ')}`
+    });
+  }
 
-  if (directSerial) {
-    stageObj.currentSerial = directSerial.trim().toUpperCase();
+  if (!['pending', 'done'].includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid status: '${status}'. Allowed: 'pending', 'done'`
+    });
+  }
+
+  const unitIndex = productionState.units.findIndex(u => u.serial === serial.trim().toUpperCase());
+  if (unitIndex === -1) {
+    return res.status(404).json({
+      success: false,
+      message: `Unit '${serial}' not found in current batch`
+    });
+  }
+
+  const unit = productionState.units[unitIndex];
+
+  // Validate cascading for marking as 'done'
+  if (status === 'done' && !canEditUnitAtStage(unit, stage)) {
+    const prevStage = getPrerequisiteStage(stage);
+    return res.status(400).json({
+      success: false,
+      message: `Cannot mark ${serial} as done at ${stage.toUpperCase()}. ${prevStage} must be done first.`
+    });
+  }
+
+  // If un-doing a stage, also undo all downstream stages (cascading un-do)
+  if (status === 'pending') {
+    if (stage === 'assembly') {
+      unit.assembly = 'pending';
+      unit.ft = 'pending';
+      unit.dlc = 'pending';
+      unit.oqc = 'pending';
+      unit.shipment = 'pending';
+    } else if (stage === 'ft') {
+      unit.ft = 'pending';
+      unit.dlc = 'pending';
+      unit.oqc = 'pending';
+      unit.shipment = 'pending';
+    } else if (stage === 'dlc') {
+      unit.dlc = 'pending';
+      unit.oqc = 'pending';
+      unit.shipment = 'pending';
+    } else if (stage === 'oqc') {
+      unit.oqc = 'pending';
+      unit.shipment = 'pending';
+    } else if (stage === 'shipment') {
+      unit.shipment = 'pending';
+    }
   } else {
-    const currP = parseSerial(stageObj.currentSerial || stageObj.startSerial || 'PST20001');
-    const newNum = Math.max(0, currP.num + delta);
-    stageObj.currentSerial = formatSerial(currP.prefix, newNum, currP.pad);
+    unit[stage] = 'done';
   }
 
-  applyStageCascade(productionState.stages);
-  saveData(productionState);
+  saveData();
 
-  io.emit('production_updated', productionState);
-  io.emit('stage_pulse', {
-    stage,
-    delta,
-    currentSerial: stageObj.currentSerial,
-    currentCount: stageObj.currentCount
-  });
+  const fullState = buildFullState(productionState);
+  io.emit('production_updated', fullState);
 
   res.json({
     success: true,
-    message: `${stage.toUpperCase()} incremented by ${delta > 0 ? '+' : ''}${delta} ➔ Current: ${stageObj.currentSerial} (${stageObj.currentCount} units)`,
-    stage: stageObj,
-    data: productionState
+    message: `${serial} → ${stage.toUpperCase()}: ${status}`,
+    unit,
+    data: fullState
   });
 });
 
-// 2b. Set / Save Specific Stage Serials and Target (/api/production/assembly/save, /api/production/assembly/set, /api/production/ft/save, etc.)
-app.all(['/api/production/:stage/set', '/api/production/:stage/save', '/api/production/set/:stage', '/api/production/save/:stage'], (req, res) => {
-  const stage = (req.params.stage || '').toLowerCase();
-  if (!['assembly', 'ft', 'dlc'].includes(stage)) {
+// 3. Configure daily batch (super admin only)
+// POST /api/production/configure
+// Body: { startNum: 21001, dailyTarget: 50, prefix: "PST" }
+app.post('/api/production/configure', (req, res) => {
+  const { startNum, dailyTarget, prefix } = req.body;
+
+  const newPrefix = (prefix || productionState.prefix || 'PST').trim().toUpperCase();
+  const newStartNum = parseInt(startNum, 10);
+  const newDailyTarget = parseInt(dailyTarget, 10);
+
+  if (isNaN(newStartNum) || newStartNum < 1) {
     return res.status(400).json({
       success: false,
-      message: `Invalid stage: '${stage}'. Allowed stages: 'assembly', 'ft', 'dlc'`
+      message: 'startNum must be a positive integer'
     });
   }
 
-  const { currentSerial, targetSerial, startSerial } = req.body;
-  const stageObj = productionState.stages[stage];
-
-  if (startSerial !== undefined) {
-    stageObj.startSerial = startSerial ? startSerial.trim().toUpperCase() : '';
-  }
-  if (currentSerial !== undefined) {
-    stageObj.currentSerial = currentSerial ? currentSerial.trim().toUpperCase() : '';
-  }
-  if (targetSerial !== undefined) {
-    stageObj.targetSerial = targetSerial ? targetSerial.trim().toUpperCase() : '';
+  if (isNaN(newDailyTarget) || newDailyTarget < 1 || newDailyTarget > 500) {
+    return res.status(400).json({
+      success: false,
+      message: 'dailyTarget must be between 1 and 500'
+    });
   }
 
-  applyStageCascade(productionState.stages);
-  saveData(productionState);
+  productionState.prefix = newPrefix;
+  productionState.startNum = newStartNum;
+  productionState.dailyTarget = newDailyTarget;
+  productionState.units = generateUnits(newPrefix, newStartNum, newDailyTarget);
 
-  io.emit('production_updated', productionState);
-  io.emit('stage_pulse', {
-    stage,
-    currentSerial: stageObj.currentSerial,
-    currentCount: stageObj.currentCount
-  });
+  saveData();
+
+  const fullState = buildFullState(productionState);
+  io.emit('production_updated', fullState);
 
   res.json({
     success: true,
-    message: `Saved ${stage.toUpperCase()} Proteus: ${stageObj.currentSerial} (Target: ${stageObj.targetSerial})`,
-    stage: stageObj,
-    data: productionState
+    message: `Batch configured: ${formatSerial(newPrefix, newStartNum)} → ${formatSerial(newPrefix, newStartNum + newDailyTarget - 1)} (${newDailyTarget} units)`,
+    data: fullState
   });
-});
-
-// 3. Set Current Serial or Count directly (/api/production/assembly/current, /api/production/ft/current, /api/production/dlc/current)
-app.all(['/api/production/:stage/current', '/api/production/current/:stage'], (req, res) => {
-  const stage = (req.params.stage || '').toLowerCase();
-  if (!['assembly', 'ft', 'dlc'].includes(stage)) {
-    return res.status(400).json({
-      success: false,
-      message: `Invalid stage: '${stage}'. Allowed stages: 'assembly', 'ft', 'dlc'`
-    });
-  }
-
-  const currentSerial = req.body?.currentSerial || req.body?.serial || req.query?.currentSerial || req.query?.serial;
-  const count = req.body?.count ?? req.query?.count;
-  const stageObj = productionState.stages[stage];
-
-  if (currentSerial) {
-    stageObj.currentSerial = currentSerial.trim().toUpperCase();
-  } else if (typeof count === 'number' || !isNaN(parseInt(count, 10))) {
-    const countNum = parseInt(count, 10);
-    const startP = parseSerial(stageObj.startSerial || 'PST20001');
-    const newNum = countNum > 0 ? startP.num + countNum - 1 : startP.num;
-    stageObj.currentSerial = formatSerial(startP.prefix, newNum, startP.pad);
-  } else {
-    return res.status(400).json({
-      success: false,
-      message: 'Please provide currentSerial (e.g. "PST20050") or count (e.g. 50)'
-    });
-  }
-
-  applyStageCascade(productionState.stages);
-  saveData(productionState);
-
-  io.emit('production_updated', productionState);
-  io.emit('stage_pulse', {
-    stage,
-    currentSerial: stageObj.currentSerial,
-    currentCount: stageObj.currentCount
-  });
-
-  res.json({
-    success: true,
-    message: `${stage.toUpperCase()} Current updated ➔ ${stageObj.currentSerial} (${stageObj.currentCount} units)`,
-    stage: stageObj,
-    data: productionState
-  });
-});
-
-// 4. Set Assembly Target (or any stage target) directly
-// POST /api/production/assembly/target (Body: { targetSerial: 'PST20500' } or { targetCount: 500 } or { target: 500 })
-app.all(['/api/production/assembly/target', '/api/production/target/assembly', '/api/production/target', '/api/production/:stage/target'], (req, res) => {
-  const stage = (req.params?.stage || req.body?.stage || 'assembly').toLowerCase();
-  const targetSerial = req.body?.targetSerial || req.body?.target || req.query?.targetSerial;
-  const targetCount = req.body?.targetCount ?? req.query?.targetCount;
-
-  const stageObj = productionState.stages[stage] || productionState.stages.assembly;
-
-  if (targetSerial && typeof targetSerial === 'string' && isNaN(targetSerial)) {
-    stageObj.targetSerial = targetSerial.trim().toUpperCase();
-  } else if (typeof (targetCount ?? targetSerial) === 'number' || !isNaN(parseInt(targetCount ?? targetSerial, 10))) {
-    const tgtUnits = parseInt(targetCount ?? targetSerial, 10);
-    const startP = parseSerial(stageObj.startSerial || 'PST20001');
-    const newNum = tgtUnits > 0 ? startP.num + tgtUnits - 1 : startP.num;
-    stageObj.targetSerial = formatSerial(startP.prefix, newNum, startP.pad);
-  } else {
-    return res.status(400).json({
-      success: false,
-      message: 'Please provide targetSerial (e.g. "PST20500") or targetCount (e.g. 500)'
-    });
-  }
-
-  applyStageCascade(productionState.stages);
-  saveData(productionState);
-
-  io.emit('production_updated', productionState);
-
-  res.json({
-    success: true,
-    message: `${stage.toUpperCase()} Target updated ➔ ${stageObj.targetSerial} (${stageObj.targetCount} units)`,
-    stage: stageObj,
-    data: productionState
-  });
-});
-
-// 5. Generic / Legacy update route
-app.post('/api/production/update', (req, res) => {
-  const { stage, currentSerial, targetSerial, startSerial, delta, shift } = req.body;
-
-  if (shift) {
-    // Always force auto shift — determined by system time only
-    productionState.shiftMode = 'auto';
-    productionState.shift = getAutoShift();
-  }
-
-  if (stage && productionState.stages[stage]) {
-    const stageObj = productionState.stages[stage];
-    
-    if (startSerial !== undefined) {
-      stageObj.startSerial = startSerial ? startSerial.trim().toUpperCase() : '';
-    }
-
-    if (currentSerial !== undefined) {
-      stageObj.currentSerial = currentSerial ? currentSerial.trim().toUpperCase() : '';
-    } else if (typeof delta === 'number') {
-      const currP = parseSerial(stageObj.currentSerial);
-      const newNum = Math.max(0, currP.num + delta);
-      stageObj.currentSerial = formatSerial(currP.prefix, newNum, currP.pad);
-    }
-
-    if (targetSerial !== undefined) {
-      stageObj.targetSerial = targetSerial ? targetSerial.trim().toUpperCase() : '';
-    }
-
-    // Apply cascade propagation
-    applyStageCascade(productionState.stages);
-  }
-
-  saveData(productionState);
-  io.emit('production_updated', productionState);
-
-  res.json({ success: true, data: productionState });
-});
-
-// Batch update all stages
-app.post('/api/production/batch', (req, res) => {
-  const { stages, shift } = req.body;
-  if (shift) productionState.shift = shift;
-
-  if (stages) {
-    ['assembly', 'ft', 'dlc'].forEach((sKey) => {
-      if (stages[sKey] && productionState.stages[sKey]) {
-        const s = stages[sKey];
-        if (s.startSerial !== undefined) productionState.stages[sKey].startSerial = s.startSerial ? s.startSerial.trim().toUpperCase() : '';
-        if (s.currentSerial !== undefined) productionState.stages[sKey].currentSerial = s.currentSerial ? s.currentSerial.trim().toUpperCase() : '';
-        if (s.targetSerial !== undefined) productionState.stages[sKey].targetSerial = s.targetSerial ? s.targetSerial.trim().toUpperCase() : '';
-      }
-    });
-    applyStageCascade(productionState.stages);
-  }
-
-  saveData(productionState);
-  io.emit('production_updated', productionState);
-  res.json({ success: true, data: productionState });
-});
-
-// Reset count / serials (for new shift or next batch)
-app.post('/api/production/reset', (req, res) => {
-  const { mode, stage, newStartSerial, newTargetSerial, newShift } = req.body;
-
-  if (newShift) {
-    productionState.shift = newShift;
-  }
-
-  if (mode === 'next_batch' && newStartSerial && newTargetSerial) {
-    if (productionState.stages.assembly) {
-      productionState.stages.assembly.startSerial = newStartSerial.trim().toUpperCase();
-      productionState.stages.assembly.currentSerial = newStartSerial.trim().toUpperCase();
-      productionState.stages.assembly.targetSerial = newTargetSerial.trim().toUpperCase();
-    }
-    if (productionState.stages.ft) {
-      productionState.stages.ft.startSerial = newStartSerial.trim().toUpperCase();
-      productionState.stages.ft.currentSerial = newStartSerial.trim().toUpperCase();
-    }
-    if (productionState.stages.dlc) {
-      productionState.stages.dlc.startSerial = newStartSerial.trim().toUpperCase();
-      productionState.stages.dlc.currentSerial = newStartSerial.trim().toUpperCase();
-    }
-    applyStageCascade(productionState.stages);
-  } else if (mode === 'all_counts') {
-    Object.keys(productionState.stages).forEach(key => {
-      const s = productionState.stages[key];
-      s.currentSerial = s.startSerial;
-    });
-    applyStageCascade(productionState.stages);
-  } else if (mode === 'single_stage' && stage && productionState.stages[stage]) {
-    const s = productionState.stages[stage];
-    s.currentSerial = s.startSerial;
-    applyStageCascade(productionState.stages);
-  }
-
-  saveData(productionState);
-  io.emit('production_updated', productionState);
-  res.json({ success: true, data: productionState });
 });
 
 // Catch-all for React SPA routing
@@ -729,54 +585,72 @@ app.get('*', (req, res) => {
   }
 });
 
-// Socket.io Real-Time connection handling
+// ==========================================
+// SOCKET.IO REAL-TIME
+// ==========================================
+
 io.on('connection', (socket) => {
-  // Send initial state
-  socket.emit('initial_state', productionState);
+  // Send initial state on connect
+  socket.emit('initial_state', buildFullState(productionState));
 
-  // Handle client increment event (+1, +5, etc)
-  socket.on('increment_count', ({ stage, delta }) => {
-    if (stage && productionState.stages[stage]) {
-      const stageObj = productionState.stages[stage];
-      const diff = delta || 1;
-      const currP = parseSerial(stageObj.currentSerial);
-      const newNum = Math.max(0, currP.num + diff);
-      stageObj.currentSerial = formatSerial(currP.prefix, newNum, currP.pad);
-      applyStageCascade(productionState.stages);
+  // Handle unit status toggle via WebSocket (fallback)
+  socket.on('update_unit_status', ({ serial, stage, status }) => {
+    if (!serial || !stage || !status) return;
+    const allowedStages = ['assembly', 'ft', 'dlc', 'oqc', 'shipment'];
+    if (!allowedStages.includes(stage)) return;
+    if (!['pending', 'done'].includes(status)) return;
 
-      saveData(productionState);
-      io.emit('production_updated', productionState);
-      io.emit('stage_pulse', { stage, delta: diff, currentSerial: stageObj.currentSerial, currentCount: stageObj.currentCount });
+    const unit = productionState.units.find(u => u.serial === serial.trim().toUpperCase());
+    if (!unit) return;
+
+    if (status === 'done' && !canEditUnitAtStage(unit, stage)) return;
+
+    if (status === 'pending') {
+      if (stage === 'assembly') {
+        unit.assembly = 'pending';
+        unit.ft = 'pending';
+        unit.dlc = 'pending';
+        unit.oqc = 'pending';
+        unit.shipment = 'pending';
+      } else if (stage === 'ft') {
+        unit.ft = 'pending';
+        unit.dlc = 'pending';
+        unit.oqc = 'pending';
+        unit.shipment = 'pending';
+      } else if (stage === 'dlc') {
+        unit.dlc = 'pending';
+        unit.oqc = 'pending';
+        unit.shipment = 'pending';
+      } else if (stage === 'oqc') {
+        unit.oqc = 'pending';
+        unit.shipment = 'pending';
+      } else if (stage === 'shipment') {
+        unit.shipment = 'pending';
+      }
+    } else {
+      unit[stage] = 'done';
     }
-  });
 
-  // Handle direct serial number scan / set
-  socket.on('set_stage_serial', ({ stage, currentSerial, targetSerial, startSerial }) => {
-    if (stage && productionState.stages[stage]) {
-      const stageObj = productionState.stages[stage];
-      if (startSerial !== undefined) stageObj.startSerial = startSerial ? startSerial.trim().toUpperCase() : '';
-      if (currentSerial !== undefined) stageObj.currentSerial = currentSerial ? currentSerial.trim().toUpperCase() : '';
-      if (targetSerial !== undefined) stageObj.targetSerial = targetSerial ? targetSerial.trim().toUpperCase() : '';
-      applyStageCascade(productionState.stages);
-
-      saveData(productionState);
-      io.emit('production_updated', productionState);
-      io.emit('stage_pulse', { stage, currentSerial: stageObj.currentSerial, currentCount: stageObj.currentCount });
-    }
+    saveData();
+    io.emit('production_updated', buildFullState(productionState));
   });
 
   // Handle shift update — always auto mode
   socket.on('set_shift', () => {
     productionState.shiftMode = 'auto';
     productionState.shift = getAutoShift();
-    saveData(productionState);
-    io.emit('production_updated', productionState);
+    saveData();
+    io.emit('production_updated', buildFullState(productionState));
   });
 });
 
+// ==========================================
+// START SERVER
+// ==========================================
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`====================================================`);
-  console.log(` PROTEUS PRODUCTION TRACKER (MONGODB CLOUD ENGINE) `);
+  console.log(` PROTEUS PRODUCTION TRACKER (5-STAGE CASCADE)       `);
   console.log(` Local:            http://localhost:${PORT}`);
   console.log(` TV Display View:  http://localhost:${PORT}`);
   console.log(` Admin Panel View: http://localhost:${PORT}/#admin`);

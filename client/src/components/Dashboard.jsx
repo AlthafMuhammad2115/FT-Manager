@@ -2,15 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { Header } from './Header';
 import { StageCard } from './StageCard';
 import { useProduction } from '../context/ProductionContext';
-import { BarChart3, CheckSquare, Zap, QrCode, Minimize } from 'lucide-react';
+import { Zap, Minimize, Truck, CheckCircle2, TrendingUp, PackageCheck } from 'lucide-react';
 
 export const Dashboard = ({ onOpenAdmin }) => {
-  const { data, lastPulseStage, incrementCount } = useProduction();
+  const { data } = useProduction();
   const stages = data.stages || {};
-  const [viewMode, setViewMode] = useState('auto'); // 'auto' | 'inverse'
   const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement || document.webkitFullscreenElement));
+  const [viewMode, setViewMode] = useState('auto');
 
-  // Sync fullscreen state with standard browser events
+  // Sync fullscreen state
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement || document.webkitFullscreenElement));
@@ -46,36 +46,20 @@ export const Dashboard = ({ onOpenAdmin }) => {
     }
   };
 
-  const assembly = stages.assembly || { startSerial: 'PST20001', currentSerial: 'PST20001', targetSerial: 'PST20200', targetCount: 200, currentCount: 0 };
-  const ft = stages.ft || { startSerial: 'PST20001', currentSerial: 'PST20001', targetSerial: 'PST20200', targetCount: 200, currentCount: 0 };
-  const dlc = stages.dlc || { startSerial: 'PST20001', currentSerial: 'PST20001', targetSerial: 'PST20200', targetCount: 200, currentCount: 0 };
-
-  const totalCompleted = (assembly.currentCount || 0) + (ft.currentCount || 0) + (dlc.currentCount || 0);
-  const totalTargetUnits = (assembly.targetCount || 0) + (ft.targetCount || 0) + (dlc.targetCount || 0);
-  const overallPct = totalTargetUnits > 0 ? Math.round((totalCompleted / totalTargetUnits) * 100) : 0;
-
-  // Keyboard shortcut listener for physical keypad / barcode scanners / fullscreen
+  // Keyboard: M to open admin
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // If user is inside an input field, do nothing
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
-
-      if (e.key === '1' || e.key === 'a' || e.key === 'A') {
-        incrementCount('assembly', 1, 'Station 1 Tap');
-      } else if (e.key === '2' || e.key === 'f' || e.key === 'F') {
-        incrementCount('ft', 1, 'Station 2 Tap');
-      } else if (e.key === '3' || e.key === 'd' || e.key === 'D') {
-        incrementCount('dlc', 1, 'Station 3 Tap');
-      } else if (e.key === 'm' || e.key === 'M') {
+      if (e.key === 'm' || e.key === 'M') {
         onOpenAdmin();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [incrementCount, onOpenAdmin]);
+  }, [onOpenAdmin]);
 
-  // Sync viewMode to body class so CSS can override html/body overflow on large screens
+  // Sync viewMode to body class
   useEffect(() => {
     if (viewMode === 'inverse') {
       document.body.classList.add('view-inverse-active');
@@ -85,11 +69,30 @@ export const Dashboard = ({ onOpenAdmin }) => {
     return () => document.body.classList.remove('view-inverse-active');
   }, [viewMode]);
 
+  const assembly = stages.assembly || {};
+  const ft = stages.ft || {};
+  const dlc = stages.dlc || {};
+  const oqc = stages.oqc || {};
+  const shipment = stages.shipment || {};
+
+  const totalDone = (assembly.doneCount || 0) + (ft.doneCount || 0) + (dlc.doneCount || 0) + (oqc.doneCount || 0) + (shipment.doneCount || 0);
+  const totalTarget = (assembly.totalCount || 0) + (ft.totalCount || 0) + (dlc.totalCount || 0) + (oqc.totalCount || 0) + (shipment.totalCount || 0);
+  const overallPct = totalTarget > 0 ? Math.round((totalDone / totalTarget) * 100) : 0;
+
+  // Shipment summary details
+  const shipDone = shipment.doneCount || 0;
+  const shipTotal = shipment.totalCount || 50;
+  const shipPct = shipTotal > 0 ? Math.min(100, Math.round((shipDone / shipTotal) * 100)) : 0;
+  const shipRemaining = Math.max(0, shipTotal - shipDone);
+  const shipStart = shipment.startSerial || '---';
+  const shipEnd = shipment.endSerial || '---';
+  const shipCompleted = shipDone >= shipTotal && shipTotal > 0;
+
   return (
     <div className={`tv-container${viewMode === 'inverse' ? ' view-inverse' : ''}${isFullscreen ? ' is-fullscreen' : ''}`}>
       <div className="tv-background" />
 
-      {/* Floating Exit Button at Top Right in Fullscreen Mode */}
+      {/* Floating Exit Button in Fullscreen */}
       {isFullscreen && (
         <button
           className="tv-btn-fullscreen-exit"
@@ -102,7 +105,7 @@ export const Dashboard = ({ onOpenAdmin }) => {
         </button>
       )}
 
-      {/* Top Navbar Header - Only visible when not in Fullscreen Mode */}
+      {/* Header - Only visible when not in Fullscreen */}
       {!isFullscreen && (
         <Header 
           onOpenAdmin={onOpenAdmin} 
@@ -113,42 +116,75 @@ export const Dashboard = ({ onOpenAdmin }) => {
         />
       )}
 
-      {/* 3 Columns / Cards: Assembly, FT, DLC - Always Center Stage */}
+      {/* Shipment Details Bar — Just below navbar */}
+      <section className="tv-shipment-banner" aria-label="Shipment Details">
+        <div className="tv-shipment-left">
+          <div className="tv-shipment-icon-wrap">
+            <Truck size={20} />
+          </div>
+          <div className="tv-shipment-title-wrap">
+            <h3>Shipment & Dispatch</h3>
+            <span>Final Logistics & Packaging Fulfillment</span>
+          </div>
+        </div>
+
+        <div className="tv-shipment-center">
+          <div className="tv-shipment-range-box" title="Batch Serial Range">
+            <span>{shipStart}</span>
+            <span className="arrow">→</span>
+            <span>{shipEnd}</span>
+          </div>
+
+          <div className="tv-shipment-progress-wrap">
+            <div className="tv-shipment-progress-info">
+              <span>DISPATCH PROGRESS</span>
+              <strong>{shipPct}%</strong>
+            </div>
+            <div className="tv-shipment-progress-track">
+              <div className="tv-shipment-progress-fill" style={{ width: `${Math.min(100, shipPct)}%` }} />
+            </div>
+          </div>
+        </div>
+
+        <div className="tv-shipment-right">
+          <div className="tv-shipment-count-badge" title="Shipped / Total Units">
+            <span className="tv-shipment-count-huge">{shipDone}</span>
+            <span className="tv-shipment-count-total">/ {shipTotal} Units Shipped</span>
+          </div>
+
+          <div className={`tv-shipment-status-pill ${shipCompleted ? 'completed' : shipDone > 0 ? 'in-progress' : 'pending'}`}>
+            {shipCompleted ? (
+              <>
+                <CheckCircle2 size={13} />
+                <span>ALL DISPATCHED</span>
+              </>
+            ) : shipDone > 0 ? (
+              <>
+                <TrendingUp size={13} />
+                <span>{shipRemaining} REMAINING</span>
+              </>
+            ) : (
+              <>
+                <PackageCheck size={13} />
+                <span>AWAITING DISPATCH</span>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* 4 Stage Cards: Assembly, FT, DLC, OQC */}
       <main className="tv-stages-grid">
-        <StageCard
-          stageKey="assembly"
-          stageData={assembly}
-          isPulsing={lastPulseStage === 'assembly'}
-          stepIndex={1}
-        />
-        <StageCard
-          stageKey="ft"
-          stageData={ft}
-          isPulsing={lastPulseStage === 'ft'}
-          stepIndex={2}
-        />
-        <StageCard
-          stageKey="dlc"
-          stageData={dlc}
-          isPulsing={lastPulseStage === 'dlc'}
-          stepIndex={3}
-        />
+        <StageCard stageKey="assembly" stageData={assembly} stepIndex={1} />
+        <StageCard stageKey="ft" stageData={ft} stepIndex={2} />
+        <StageCard stageKey="dlc" stageData={dlc} stepIndex={3} />
+        <StageCard stageKey="oqc" stageData={oqc} stepIndex={4} />
       </main>
 
-      {/* Bottom Summary Bar - Only visible when not in Fullscreen Mode */}
+      {/* Footer */}
       {!isFullscreen && (
         <footer className="tv-footer">
           <div className="tv-footer-stats">
-            {/* <div className="tv-total-badge">
-              <QrCode size={18} color="#ea580c" />
-              <span>Latest Packout Serial: <strong>{dlc.currentSerial || 'PST20000'}</strong></span>
-            </div> */}
-
-            {/* <div className="tv-total-badge">
-              <BarChart3 size={18} color="#f97316" />
-              <span>Cumulative Units Processed: <strong>{totalCompleted}</strong> Units</span>
-            </div> */}
-
             <div className="tv-total-badge">
               <Zap size={18} color="#fb923c" />
               <span>Overall Target Yield: <strong>{overallPct}%</strong></span>
