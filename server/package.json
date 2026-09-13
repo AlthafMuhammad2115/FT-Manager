@@ -4,13 +4,17 @@
   "description": "Real-time production tracking backend for Proteus assembly line",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "start:test": "node server.js --test",
+    "dev": "nodemon server.js",
+    "dev:test": "nodemon server.js --test"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
     "mongoose": "^9.9.5",
+    "nodemon": "^3.1.14",
     "socket.io": "^4.7.5"
   }
 }

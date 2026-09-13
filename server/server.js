@@ -18,6 +18,15 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
 
+// Database Configuration: use 'test_ft_manager_2_0' if in test mode, else 'ft_manager_2_0'
+const isTestMode =
+  process.env.USE_TEST_DB === 'true' ||
+  process.env.TEST_MODE === 'true' ||
+  process.env.NODE_ENV === 'test' ||
+  process.argv.includes('--test');
+
+const DB_NAME = process.env.DB_NAME || (isTestMode ? 'test_ft_manager_2_0' : 'ft_manager_2_0');
+
 // ==========================================
 // HELPER UTILITIES
 // ==========================================
@@ -249,10 +258,9 @@ async function initMongoDB() {
   }
 
   try {
-    const dbName = 'ft_manager_2_0';
-    console.log(`🔄 Connecting to MongoDB database '${dbName}'...`);
-    await mongoose.connect(MONGODB_URI, { dbName });
-    console.log(`✅ Connected to MongoDB successfully! Database: ${dbName}`);
+    console.log(`🔄 Connecting to MongoDB database '${DB_NAME}'${isTestMode ? ' [TEST MODE]' : ''}...`);
+    await mongoose.connect(MONGODB_URI, { dbName: DB_NAME });
+    console.log(`✅ Connected to MongoDB successfully! Database: ${DB_NAME}`);
 
     // Fetch existing state from MongoDB
     const existingDoc = await ProductionModel.findOne({ key: 'current_production_state' }).lean();
@@ -543,6 +551,139 @@ app.post('/api/production/unit/status', (req, res) => {
   });
 });
 
+// 2b. Batch update unit status by stage
+// POST /api/production/stage/status
+// Body: { stage: "assembly" | "ft" | "dlc" | "oqc" | "shipment", status: "done" | "pending", serials: ["PST21001", "PST21002"] }
+app.post('/api/production/stage/status', async (req, res) => {
+  const { stage, status, serials, autoCompletePrevious } = req.body;
+
+  if (!stage || !status || !serials) {
+    return res.status(400).json({
+      success: false,
+      message: 'Required fields: stage, status, serials'
+    });
+  }
+
+  if (!Array.isArray(serials)) {
+    return res.status(400).json({
+      success: false,
+      message: "'serials' must be an array of serial numbers"
+    });
+  }
+
+  if (serials.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: "'serials' array cannot be empty"
+    });
+  }
+
+  const allowedStages = ['assembly', 'ft', 'dlc', 'oqc', 'shipment'];
+  const stageKey = String(stage).trim().toLowerCase();
+  if (!allowedStages.includes(stageKey)) {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid stage: '${stage}'. Allowed: ${allowedStages.join(', ')}`
+    });
+  }
+
+  const statusVal = String(status).trim().toLowerCase();
+  if (!['pending', 'done'].includes(statusVal)) {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid status: '${status}'. Allowed: 'pending', 'done'`
+    });
+  }
+
+  const stageIdx = allowedStages.indexOf(stageKey);
+  const updated = [];
+  const blocked = [];
+  const notFound = [];
+  const prefix = (productionState.prefix || 'PST').toUpperCase();
+
+  // Deduplicate serial numbers in input while preserving order
+  const uniqueSerials = [...new Set(serials.map(s => String(s).trim()))];
+
+  for (const rawSerial of uniqueSerials) {
+    const s = rawSerial.toUpperCase();
+    const unit = productionState.units.find(u =>
+      u.serial.toUpperCase() === s ||
+      String(u.num) === s ||
+      u.serial.toUpperCase() === `${prefix}${s}`
+    );
+
+    if (!unit) {
+      notFound.push(rawSerial);
+      continue;
+    }
+
+    if (statusVal === 'pending') {
+      // Cascading un-do: reset this stage and all downstream stages
+      for (let i = stageIdx; i < allowedStages.length; i++) {
+        unit[allowedStages[i]] = 'pending';
+      }
+      updated.push(unit.serial);
+    } else {
+      // statusVal === 'done': Enforce cascading prerequisite (first assembly -> ft -> dlc -> oqc -> shipment)
+      if (!autoCompletePrevious && !canEditUnitAtStage(unit, stageKey)) {
+        blocked.push(unit.serial);
+        continue;
+      }
+
+      if (autoCompletePrevious) {
+        for (let i = 0; i <= stageIdx; i++) {
+          unit[allowedStages[i]] = 'done';
+        }
+      } else {
+        unit[stageKey] = 'done';
+      }
+      updated.push(unit.serial);
+    }
+  }
+
+  if (updated.length === 0) {
+    if (blocked.length > 0) {
+      const prevStage = getPrerequisiteStage(stageKey);
+      return res.status(400).json({
+        success: false,
+        message: `Cannot mark ${blocked.length} unit(s) as done at ${stageKey.toUpperCase()}. ${prevStage} must be done first.`,
+        stage: stageKey,
+        prerequisite_stage: prevStage,
+        blocked_count: blocked.length,
+        blocked,
+        not_found_count: notFound.length,
+        not_found: notFound
+      });
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: 'None of the provided serial numbers were found in current batch',
+      not_found: notFound
+    });
+  }
+
+  await saveData();
+
+  const fullState = buildFullState(productionState);
+  io.emit('production_updated', fullState);
+
+  const prevStage = getPrerequisiteStage(stageKey);
+  return res.json({
+    success: true,
+    message: `Updated ${updated.length} unit(s) at stage '${stageKey.toUpperCase()}' to '${statusVal}'${blocked.length > 0 ? ` (${blocked.length} blocked: ${prevStage} required first)` : ''}`,
+    stage: stageKey,
+    status: statusVal,
+    updated_count: updated.length,
+    updated,
+    blocked_count: blocked.length,
+    blocked,
+    not_found_count: notFound.length,
+    not_found: notFound,
+    data: fullState
+  });
+});
+
 // 3. Configure daily batch (super admin only)
 // POST /api/production/configure
 // Body: { startNum: 21001, dailyTarget: 50, prefix: "PST" }
@@ -689,8 +830,10 @@ io.on('connection', (socket) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`====================================================`);
   console.log(` PROTEUS PRODUCTION TRACKER (5-STAGE CASCADE)       `);
+  console.log(` Database:         ${DB_NAME}${isTestMode ? ' [TEST MODE]' : ''}`);
   console.log(` Backend API:      http://localhost:${PORT}`);
   console.log(` Production API:   http://localhost:${PORT}/api/production`);
   console.log(` Range API:        http://localhost:${PORT}/api/production/batch/range`);
+  console.log(` Stage Status API: http://localhost:${PORT}/api/production/stage/status`);
   console.log(`====================================================`);
 });

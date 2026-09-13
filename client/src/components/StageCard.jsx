@@ -62,7 +62,7 @@ export const StageCard = ({ stageKey, stageData, stepIndex }) => {
             </div>
           </div>
           
-          {/* Serial Range Display */}
+          {/* Serial Range Display — wraps to two lines only if content overflows */}
           <div className="tv-serial-range">
             <span className="tv-serial-start">{startSerial}</span>
             <span className="tv-serial-arrow">→</span>

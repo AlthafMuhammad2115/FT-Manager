@@ -111,12 +111,32 @@ export const ProductionProvider = ({ children }) => {
       });
   }, []);
 
+  // Batch update unit status by stage
+  const updateStageStatus = useCallback((stage, status, serials) => {
+    return fetch(getApiUrl('/api/production/stage/status'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stage, status, serials })
+    })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data) {
+          setData(res.data);
+        }
+        return res;
+      })
+      .catch(err => {
+        console.error(`Error batch updating status for ${stage}:`, err.message);
+      });
+  }, []);
+
   return (
     <ProductionContext.Provider
       value={{
         data,
         connected,
         updateUnitStatus,
+        updateStageStatus,
         configureBatch
       }}
     >
